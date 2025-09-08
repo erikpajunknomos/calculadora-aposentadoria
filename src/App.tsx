@@ -23,15 +23,6 @@ const Section: React.FC<React.PropsWithChildren<{ className?: string }>> = ({
   </div>
 );
 
-const H1: React.FC<React.PropsWithChildren> = ({ children }) => (
-  <h1
-    className="text-2xl sm:text-3xl font-bold tracking-tight"
-    style={{ color: "var(--brand-dark)" }}
-  >
-    {children}
-  </h1>
-);
-
 const Label: React.FC<React.PropsWithChildren> = ({ children }) => (
   <label className="text-sm font-medium text-slate-800">{children}</label>
 );
@@ -446,15 +437,16 @@ export default function App() {
       <div className="mx-auto max-w-7xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <img
-              src="/Logo_VerdeLima_XP-preto.svg"
-              alt="Nomos Sports"
-              className="h-8 w-auto"
-              loading="eager"
-              decoding="async"
-            />
-            <H1>Calculadora de Aposentadoria para Atletas</H1>
+          <div className="flex items-center gap-4">
+            <span className="px-3 py-1 rounded-md bg-[var(--brand-dark)] text-[var(--brand-lime)] font-semibold">
+              Nomos Sports
+            </span>
+            <h1
+              className="text-3xl sm:text-4xl font-extrabold tracking-tight"
+              style={{ color: "var(--brand-dark)" }}
+            >
+              Calculadora de Aposentadoria para Atletas
+            </h1>
           </div>
           <Button variant="outline" onClick={() => window.print()}>
             Exportar PDF
@@ -508,8 +500,67 @@ export default function App() {
               </div>
             </div>
 
-            {/* Bloco com SWR / retornos / avançado / aportes */}
-            <div className="rounded-2xl border p-3 mt-3 space-y-3">
+            {/* APORTES em cima; SWR/RETORNOS embaixo */}
+            <div className="rounded-2xl border p-3 mt-3 space-y-4">
+              {/* Contribuições pontuais */}
+              <div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-2">
+                  <Label>Contribuições pontuais (valor e mês)</Label>
+                  <Button variant="outline" onClick={addLump}>
+                    ＋
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {lumpSums.map((ls) => (
+                    <div
+                      key={ls.id}
+                      className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:items-end"
+                    >
+                      <div className="col-span-12 sm:col-span-6">
+                        <Label>Valor (BRL)</Label>
+                        <NumericInputBR
+                          value={ls.amount}
+                          onChange={(n) => updateLump(ls.id, "amount", n)}
+                        />
+                      </div>
+                      <div className="col-span-12 sm:col-span-4">
+                        <Label>Mês em que entra</Label>
+                        <BaseInput
+                          type="number"
+                          min={1}
+                          max={monthsToRetire}
+                          value={ls.month}
+                          onChange={(e) =>
+                            updateLump(
+                              ls.id,
+                              "month",
+                              Number(e.target.value) || 1
+                            )
+                          }
+                        />
+                        <p className="text-xs text-slate-500 mt-1 sm:hidden">
+                          1 = próximo mês … até {monthsToRetire}
+                        </p>
+                      </div>
+                      <div className="col-span-12 sm:col-span-2 flex justify-start sm:justify-end mt-1 sm:mt-0">
+                        <Button
+                          variant="outline"
+                          onClick={() => removeLump(ls.id)}
+                        >
+                          －
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {lumpSums.length === 0 && (
+                    <p className="text-xs text-slate-500">
+                      Nenhum aporte único adicionado.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* SWR e retornos */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
                 {/* SWR (esquerda) */}
                 <div>
@@ -564,61 +615,6 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <Switch checked={showAdvanced} onChange={setShowAdvanced} />
                 <span className="text-sm">Mostrar avançado</span>
-              </div>
-
-              {/* Contribuições pontuais */}
-              <div className="mt-2">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-2">
-                  <Label>Contribuições pontuais (valor e mês)</Label>
-                  <Button variant="outline" onClick={addLump}>
-                    ＋
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {lumpSums.map((ls) => (
-                    <div
-                      key={ls.id}
-                      className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:items-end"
-                    >
-                      <div className="col-span-12 sm:col-span-6">
-                        <Label>Valor (BRL)</Label>
-                        <NumericInputBR
-                          value={ls.amount}
-                          onChange={(n) => updateLump(ls.id, "amount", n)}
-                        />
-                      </div>
-                      <div className="col-span-12 sm:col-span-4">
-                        <Label>Mês em que entra</Label>
-                        <BaseInput
-                          type="number"
-                          min={1}
-                          max={monthsToRetire}
-                          value={ls.month}
-                          onChange={(e) =>
-                            updateLump(
-                              ls.id,
-                              "month",
-                              Number(e.target.value) || 1
-                            )
-                          }
-                        />
-                        <p className="text-xs text-slate-500 mt-1 sm:hidden">
-                          1 = próximo mês … até {monthsToRetire}
-                        </p>
-                      </div>
-                      <div className="col-span-12 sm:col-span-2 flex justify-start sm:justify-end mt-1 sm:mt-0">
-                        <Button variant="outline" onClick={() => removeLump(ls.id)}>
-                          －
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {lumpSums.length === 0 && (
-                    <p className="text-xs text-slate-500">
-                      Nenhum aporte único adicionado.
-                    </p>
-                  )}
-                </div>
               </div>
             </div>
           </Section>
