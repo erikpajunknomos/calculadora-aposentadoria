@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -9,9 +9,14 @@ import {
   Legend,
 } from "recharts";
 
-// --------------------- Componentes básicos ---------------------
-const Section: React.FC<React.PropsWithChildren> = ({ children }) => (
-  <div className="rounded-2xl border border-[var(--brand-gray)] bg-white shadow-sm p-4 sm:p-5 print:border-0 print:shadow-none print:p-0">
+// ---------- UI Helpers ----------
+const Section: React.FC<React.PropsWithChildren<{ className?: string }>> = ({
+  children,
+  className,
+}) => (
+  <div
+    className={`rounded-2xl border border-[var(--brand-gray)] bg-white shadow-sm p-4 sm:p-5 ${className}`}
+  >
     {children}
   </div>
 );
@@ -29,19 +34,14 @@ const Label: React.FC<React.PropsWithChildren> = ({ children }) => (
   <label className="text-sm font-medium text-slate-800">{children}</label>
 );
 
-const BaseInput = React.forwardRef<
-  HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement>
->((props, ref) => (
+const BaseInput = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
-    ref={ref}
     {...props}
     className={`mt-1 w-full rounded-xl border px-3 py-2 text-sm text-right tabular-nums tracking-tight outline-none focus:ring-2 focus:ring-[var(--brand-lime)] ${
       props.className || ""
     }`}
   />
-));
-BaseInput.displayName = "BaseInput";
+);
 
 const Button: React.FC<{
   children: React.ReactNode;
@@ -60,13 +60,19 @@ const Button: React.FC<{
   </button>
 );
 
-const Slider: React.FC<{
+const Slider = ({
+  value,
+  min,
+  max,
+  step,
+  onChange,
+}: {
   value: number;
   min: number;
   max: number;
   step: number;
   onChange: (n: number) => void;
-}> = ({ value, min, max, step, onChange }) => (
+}) => (
   <input
     type="range"
     value={value}
@@ -78,10 +84,7 @@ const Slider: React.FC<{
   />
 );
 
-const Switch: React.FC<{ checked: boolean; onChange: (b: boolean) => void }> = ({
-  checked,
-  onChange,
-}) => (
+const Switch = ({ checked, onChange }: { checked: boolean; onChange: (b: boolean) => void }) => (
   <label className="inline-flex items-center gap-2 cursor-pointer select-none">
     <span
       className={`h-5 w-9 rounded-full transition ${
@@ -103,71 +106,35 @@ const Switch: React.FC<{ checked: boolean; onChange: (b: boolean) => void }> = (
   </label>
 );
 
-// --------------------- Funções auxiliares ---------------------
+// ---------- Utils ----------
 const nfBR = new Intl.NumberFormat("pt-BR");
-function formatBRInt(n: number) {
-  if (!isFinite(n)) return "";
-  return nfBR.format(Math.trunc(n));
-}
-function parseDigits(s: string) {
-  return (s || "").replace(/\D+/g, "");
-}
-function formatCurrency(value: number, code: string = "BRL") {
-  if (!isFinite(value)) return "-";
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: code,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-function formatNumber(value: number, digits: number = 2) {
-  if (!isFinite(value)) return "-";
-  return new Intl.NumberFormat("pt-BR", {
-    maximumFractionDigits: digits,
-  }).format(value);
-}
-function monthlyRateFromRealAnnual(realAnnualPct: number) {
-  return Math.pow(1 + realAnnualPct / 100, 1 / 12) - 1;
-}
+const formatCurrency = (v: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(v);
+const formatNumber = (v: number, d = 2) =>
+  new Intl.NumberFormat("pt-BR", { maximumFractionDigits: d }).format(v);
+const monthlyRateFromRealAnnual = (r: number) => Math.pow(1 + r / 100, 1 / 12) - 1;
+const targetWealthBySWR = (annualSpend: number, swrPct: number) => (annualSpend * 100) / swrPct;
+
 type Lump = { id: number; month: number; amount: number };
-function projectToRetirement({
-  currentWealth,
-  monthlySaving,
-  months,
-  monthlyRealReturn,
-  lumpSums,
-}: {
-  currentWealth: number;
-  monthlySaving: number;
-  months: number;
-  monthlyRealReturn: number;
-  lumpSums: Lump[];
-}) {
+const projectToRetirement = (
+  currentWealth: number,
+  monthlySaving: number,
+  months: number,
+  monthlyRealReturn: number,
+  lumps: Lump[]
+) => {
   const rows: { m: number; wealth: number }[] = [];
   let W = currentWealth;
   const byMonth = new Map<number, number>();
-  for (const ls of lumpSums) {
-    const m = Math.max(0, Math.min(months, Math.floor(ls.month)));
-    byMonth.set(m, (byMonth.get(m) || 0) + (Number(ls.amount) || 0));
-  }
+  for (const ls of lumps) byMonth.set(ls.month, (byMonth.get(ls.month) || 0) + ls.amount);
   for (let t = 0; t <= months; t++) {
     rows.push({ m: t, wealth: W });
-    const oneOff = byMonth.get(t + 1) || 0;
-    W = W * (1 + monthlyRealReturn) + monthlySaving + oneOff;
+    W = W * (1 + monthlyRealReturn) + monthlySaving + (byMonth.get(t + 1) || 0);
   }
   return rows;
-}
-function targetWealthBySWR({
-  annualSpend,
-  swrPct,
-}: {
-  annualSpend: number;
-  swrPct: number;
-}) {
-  return (annualSpend * 100) / swrPct;
-}
+};
 
-// --------------------- App ---------------------
+// ---------- App ----------
 export default function App() {
   const themeVars: React.CSSProperties = {
     ["--brand-dark" as any]: "#021e19",
@@ -176,256 +143,170 @@ export default function App() {
     ["--brand-gray" as any]: "#a6a797",
   };
 
-  const [showAdvanced, setShowAdvanced] = useState(true);
   const [age, setAge] = useState(28);
   const [retireAge, setRetireAge] = useState(35);
   const [currentWealth, setCurrentWealth] = useState(2000000);
   const [monthlySaving, setMonthlySaving] = useState(80000);
+  const [monthlySpend, setMonthlySpend] = useState(60000);
   const [swrPct, setSwrPct] = useState(3.5);
   const [accumRealReturn, setAccumRealReturn] = useState(5);
-  const [monthlySpend, setMonthlySpend] = useState(60000);
+  const [retireRealReturn, setRetireRealReturn] = useState(3);
+  const [showAdvanced, setShowAdvanced] = useState(true);
+  const [lumps, setLumps] = useState<Lump[]>([]);
 
   const monthsToRetire = Math.max(0, (retireAge - age) * 12);
   const monthlyReal = monthlyRateFromRealAnnual(accumRealReturn);
 
   const accumulation = useMemo(
-    () =>
-      projectToRetirement({
-        currentWealth,
-        monthlySaving,
-        months: monthsToRetire,
-        monthlyRealReturn: monthlyReal,
-        lumpSums: [],
-      }),
-    [currentWealth, monthlySaving, monthsToRetire, monthlyReal]
+    () => projectToRetirement(currentWealth, monthlySaving, monthsToRetire, monthlyReal, lumps),
+    [currentWealth, monthlySaving, monthsToRetire, monthlyReal, lumps]
   );
-  const wealthAtRetire =
-    accumulation[accumulation.length - 1]?.wealth ?? currentWealth;
+  const wealthAtRetire = accumulation.at(-1)?.wealth ?? currentWealth;
 
-  const annualRetireSpend = monthlySpend * 12;
-  const targetWealth = targetWealthBySWR({
-    annualSpend: annualRetireSpend,
-    swrPct,
-  });
+  const annualSpend = monthlySpend * 12;
+  const targetWealth = targetWealthBySWR(annualSpend, swrPct);
   const gap = targetWealth - wealthAtRetire;
-  const progressPct = Math.max(
-    0,
-    Math.min(100, (100 * wealthAtRetire) / Math.max(targetWealth, 1))
-  );
+  const progress = Math.max(0, Math.min(100, (wealthAtRetire / targetWealth) * 100));
 
-  const chartData = useMemo(
-    () =>
-      accumulation.map((row) => ({
-        Mês: row.m,
-        "Patrimônio projetado (real)": row.wealth,
-        "Meta de aposentadoria (SWR)": targetWealth,
-      })),
-    [accumulation, targetWealth]
-  );
+  const sustainableSpend = (wealthAtRetire * retireRealReturn) / 100 / 12;
+  const extraSaving = gap > 0 ? gap / monthsToRetire : 0;
 
-  function exportPDF() {
-    window.print();
-  }
+  const chartData = accumulation.map((row) => ({
+    Mês: row.m,
+    "Patrimônio projetado (real)": row.wealth,
+    "Meta de aposentadoria (SWR)": targetWealth,
+  }));
 
   return (
     <div
-      className="min-h-screen w-full p-4 sm:p-8 print:bg-white"
-      style={themeVars as React.CSSProperties}
+      className="min-h-screen w-full p-4 sm:p-8"
+      style={{ ...themeVars, backgroundColor: "var(--brand-offwhite)" }}
     >
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div className="mx-auto max-w-7xl space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <svg width="120" height="32" viewBox="0 0 120 32" aria-hidden>
-              <rect
-                x="0"
-                y="0"
-                width="120"
-                height="32"
-                rx="6"
-                fill="#021e19"
-              />
-              <text
-                x="12"
-                y="21"
-                fontSize="14"
-                fontFamily="Inter, system-ui, sans-serif"
-                fill="#c8e05b"
-              >
-                Nomos Sports
-              </text>
-            </svg>
+            <div className="bg-[var(--brand-dark)] text-[var(--brand-lime)] px-3 py-1 rounded-md font-semibold">
+              Nomos Sports
+            </div>
             <H1>Calculadora de Aposentadoria para Atletas</H1>
           </div>
-          <div className="flex gap-2 flex-wrap items-center print:hidden">
-            <Button variant="outline" onClick={exportPDF}>
-              Exportar PDF
-            </Button>
-          </div>
+          <Button variant="outline" onClick={() => window.print()}>
+            Exportar PDF
+          </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Grid */}
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Inputs */}
           <Section>
             <p className="font-semibold mb-3">Parâmetros</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Idade atual</Label>
-                <BaseInput
-                  type="number"
-                  value={age}
-                  onChange={(e) => setAge(Number(e.target.value) || 0)}
-                />
+                <BaseInput type="number" value={age} onChange={(e) => setAge(+e.target.value)} />
               </div>
               <div>
                 <Label>Idade de aposentadoria</Label>
-                <BaseInput
-                  type="number"
-                  value={retireAge}
-                  onChange={(e) => setRetireAge(Number(e.target.value) || 0)}
-                />
+                <BaseInput type="number" value={retireAge} onChange={(e) => setRetireAge(+e.target.value)} />
               </div>
               <div className="col-span-2">
                 <Label>Patrimônio atual (BRL)</Label>
-                <BaseInput
-                  type="number"
-                  value={currentWealth}
-                  onChange={(e) =>
-                    setCurrentWealth(Number(e.target.value) || 0)
-                  }
-                />
+                <BaseInput type="number" value={currentWealth} onChange={(e) => setCurrentWealth(+e.target.value)} />
               </div>
               <div className="col-span-2">
                 <Label>Poupança mensal (BRL)</Label>
-                <BaseInput
-                  type="number"
-                  value={monthlySaving}
-                  onChange={(e) =>
-                    setMonthlySaving(Number(e.target.value) || 0)
-                  }
-                />
+                <BaseInput type="number" value={monthlySaving} onChange={(e) => setMonthlySaving(+e.target.value)} />
               </div>
               <div className="col-span-2">
                 <Label>Gasto mensal na aposentadoria (BRL)</Label>
-                <BaseInput
-                  type="number"
-                  value={monthlySpend}
-                  onChange={(e) =>
-                    setMonthlySpend(Number(e.target.value) || 0)
-                  }
-                />
+                <BaseInput type="number" value={monthlySpend} onChange={(e) => setMonthlySpend(+e.target.value)} />
               </div>
             </div>
 
             <div className="rounded-2xl border p-3 mt-3 space-y-3">
               <div>
                 <Label>SWR — Taxa segura de retirada (% a.a.)</Label>
-                <div className="mt-2">
-                  <Slider
-                    value={swrPct}
-                    onChange={setSwrPct}
-                    min={2.5}
-                    max={8}
-                    step={0.1}
-                  />
-                  <div className="text-xs text-slate-500 mt-1">
-                    Atual: {formatNumber(swrPct, 1)}%
-                  </div>
-                </div>
+                <Slider value={swrPct} onChange={setSwrPct} min={2.5} max={8} step={0.1} />
+                <div className="text-xs text-slate-500">Atual: {formatNumber(swrPct, 1)}%</div>
               </div>
-
-              <div className="flex items-center justify-between mt-2">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={showAdvanced}
-                    onChange={setShowAdvanced}
-                  />
-                  <span className="text-sm">Mostrar avançado</span>
+              <div>
+                <Label>Retorno real na acumulação (% a.a.)</Label>
+                <BaseInput type="number" value={accumRealReturn} onChange={(e) => setAccumRealReturn(+e.target.value)} />
+              </div>
+              {showAdvanced && (
+                <div>
+                  <Label>Retorno real na aposentadoria (% a.a.)</Label>
+                  <BaseInput type="number" value={retireRealReturn} onChange={(e) => setRetireRealReturn(+e.target.value)} />
                 </div>
+              )}
+              <div className="flex items-center gap-2">
+                <Switch checked={showAdvanced} onChange={setShowAdvanced} />
+                <span className="text-sm">Mostrar avançado</span>
               </div>
             </div>
           </Section>
 
+          {/* Results */}
           <div className="lg:col-span-2 space-y-6">
             <Section>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-3 gap-6">
                 <div>
                   <p className="text-xs text-slate-500">Número mágico (SWR)</p>
-                  <p className="text-2xl font-semibold">
-                    {formatCurrency(targetWealth, "BRL")}
-                  </p>
+                  <p className="text-2xl font-semibold">{formatCurrency(targetWealth)}</p>
                   <p className="text-slate-500 text-sm">
-                    {formatNumber(swrPct, 1)}% a.a. com gasto de{" "}
-                    {formatCurrency(monthlySpend, "BRL")}/mês
+                    {formatNumber(swrPct, 1)}% a.a. com gasto de {formatCurrency(monthlySpend)}/mês
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">
-                    Patrimônio ao aposentar
-                  </p>
-                  <p className="text-2xl font-semibold">
-                    {formatCurrency(wealthAtRetire, "BRL")}
-                  </p>
-                  <p className="text-slate-500 text-sm">
-                    Horizonte: {Math.round(monthsToRetire / 12)} anos
-                  </p>
+                  <p className="text-xs text-slate-500">Patrimônio ao aposentar</p>
+                  <p className="text-2xl font-semibold">{formatCurrency(wealthAtRetire)}</p>
+                  <p className="text-slate-500 text-sm">Horizonte: {Math.round(monthsToRetire / 12)} anos</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Status</p>
-                  <p
-                    className={`text-sm ${
-                      gap > 0 ? "text-slate-700" : "text-emerald-700"
-                    }`}
-                  >
-                    {gap > 0
-                      ? `Faltam ${formatCurrency(gap, "BRL")} para a meta`
-                      : "Meta de perpetuidade atingida"}
+                  <p className={gap > 0 ? "text-sm text-slate-700" : "text-sm text-emerald-700"}>
+                    {gap > 0 ? `Faltam ${formatCurrency(gap)} para a meta` : "Meta atingida"}
                   </p>
-                  <p className="text-slate-500 text-xs mt-1">
-                    Progresso: {formatNumber(progressPct, 0)}%
+                  <p className="text-slate-500 text-xs">Progresso: {formatNumber(progress, 0)}%</p>
+                  <p className="text-slate-500 text-xs">
+                    Gasto sustentável: {formatCurrency(sustainableSpend)}
                   </p>
+                  {gap > 0 && (
+                    <p className="text-slate-500 text-xs">
+                      Poupança extra necessária: {formatCurrency(extraSaving)}/mês
+                    </p>
+                  )}
                 </div>
               </div>
             </Section>
 
             <Section>
-              <p className="font-semibold mb-2">
-                Acumulação até a aposentadoria (valores reais)
-              </p>
+              <p className="font-semibold mb-2">Acumulação até a aposentadoria (valores reais)</p>
               <div className="h-[320px]">
                 <ResponsiveContainer width="100%" height={320}>
-                  <AreaChart
-                    data={chartData}
-                    margin={{ top: 10, right: 20, bottom: 0, left: 0 }}
-                  >
+                  <AreaChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="Mês" tickFormatter={(v) => `${v}m`} />
-                    <YAxis
-                      tickFormatter={(v) =>
-                        new Intl.NumberFormat("pt-BR", {
-                          notation: "compact",
-                          maximumFractionDigits: 1,
-                        }).format(v)
-                      }
-                    />
+                    <YAxis tickFormatter={(v) => formatNumber(v, 0)} />
                     <Legend />
-                    <Area
-                      type="monotone"
-                      dataKey="Patrimônio projetado (real)"
-                      stroke="var(--brand-dark)"
-                      fill="var(--brand-dark)"
-                      strokeWidth={2}
-                      fillOpacity={0.15}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="Meta de aposentadoria (SWR)"
-                      stroke="var(--brand-lime)"
-                      fill="var(--brand-lime)"
-                      strokeWidth={2}
-                      fillOpacity={0.12}
-                    />
+                    <Area dataKey="Patrimônio projetado (real)" stroke="var(--brand-dark)" fill="var(--brand-dark)" strokeWidth={2} fillOpacity={0.15} />
+                    <Area dataKey="Meta de aposentadoria (SWR)" stroke="var(--brand-lime)" fill="var(--brand-lime)" strokeWidth={2} fillOpacity={0.12} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
+            </Section>
+
+            <Section>
+              <p className="font-semibold mb-2">Como usar (rápido)</p>
+              <ol className="list-decimal list-inside space-y-1 text-sm text-slate-700">
+                <li>Preencha: idade atual, idade de aposentadoria, patrimônio atual, poupança mensal e gasto mensal.</li>
+                <li>Ajuste a SWR no slider; veja o valor alvo.</li>
+                <li>Adicione contribuições pontuais (bônus/vendas) se quiser.</li>
+                <li>Opcional: em Mostrar avançado, ajuste o retorno real na aposentadoria.</li>
+                <li>Veja o número mágico, patrimônio ao aposentar, gasto sustentável, poupança extra necessária e tempo estimado.</li>
+              </ol>
+              <p className="text-xs text-slate-500 mt-2">MVP educativo; não é aconselhamento financeiro.</p>
             </Section>
           </div>
         </div>
@@ -433,4 +314,3 @@ export default function App() {
     </div>
   );
 }
-
