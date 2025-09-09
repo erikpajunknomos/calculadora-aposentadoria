@@ -58,7 +58,11 @@ const Button: React.FC<{
   </button>
 );
 
-/* ===== Slider com preenchimento (verde à esquerda, cinza à direita) ===== */
+/* ===== Slider de SWR com preenchimento alinhado ao centro do knob =====
+   - Mede a largura real do trilho e calcula o fim do preenchimento no centro do knob.
+   - Thumb padrão: 18px (ver index.css). Se mudar lá, ajuste THUMB_PX aqui. */
+const THUMB_PX = 18;
+
 const Slider: React.FC<{
   value: number;
   min: number;
@@ -66,19 +70,42 @@ const Slider: React.FC<{
   step: number;
   onChange: (n: number) => void;
 }> = ({ value, min, max, step, onChange }) => {
-  const pct = ((value - min) / (max - min)) * 100;
+  const ref = useRef<HTMLInputElement>(null);
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    const measure = () => setW(el?.offsetWidth ?? 0);
+    measure();
+    window.addEventListener("resize", measure);
+    const ro = ("ResizeObserver" in window)
+      ? new ResizeObserver(measure)
+      : null;
+    ro?.observe(el as Element);
+    return () => {
+      window.removeEventListener("resize", measure);
+      ro?.disconnect();
+    };
+  }, []);
+
+  const t = Math.max(0, Math.min(1, (value - min) / (max - min)));
+  // posição do centro do thumb: thumb/2 + (w - thumb) * t
+  const center = w > 0 ? (THUMB_PX / 2 + (w - THUMB_PX) * t) : w * t;
+  const fillPct = w > 0 ? (center / w) * 100 : t * 100;
+
   return (
     <input
+      ref={ref}
       type="range"
       value={value}
       min={min}
       max={max}
       step={step}
       onChange={(e) => onChange(Number(e.target.value))}
-      className="w-full h-[6px] rounded-full appearance-none"
+      className="w-full h-[8px] rounded-full appearance-none ring-1 ring-[var(--brand-gray)]"
       style={{
-        background: `linear-gradient(to right, var(--brand-lime) ${pct}%, #e2e8f0 ${pct}%)`,
+        background: `linear-gradient(to right, var(--brand-lime) ${fillPct}%, #e2e8f0 ${fillPct}%)`,
       }}
+      aria-label="SWR (taxa segura de retirada)"
     />
   );
 };
@@ -433,7 +460,7 @@ export default function App() {
     return Infinity;
   }, [targetWealth, currentWealth, monthlySaving, lumpSums, monthlyReal]);
 
-  // dados do gráfico (mantém em meses, mas o eixo X mostrará ANOS via ticks)
+  // gráfico: mantemos os dados em meses e formatamos ticks como ANOS
   const chartData = useMemo(
     () =>
       accumulation.map((row) => ({
@@ -444,7 +471,6 @@ export default function App() {
     [accumulation, targetWealth]
   );
 
-  // ticks do eixo X em anos completos (12, 24, 36, …)
   const yearTicks = useMemo(() => {
     const totalYears = Math.max(1, Math.ceil(monthsToRetire / 12));
     return Array.from({ length: totalYears }, (_, i) => (i + 1) * 12);
@@ -602,7 +628,12 @@ export default function App() {
                       step={0.1}
                     />
                     <div className="text-xs text-slate-500 mt-1">
-                      Atual: {formatNumber(swrPct, 1)}% · <span className="text-[var(--brand-dark)] font-medium">3,5% é um nível histórico/realista</span>; acima de <span className="font-medium">5%</span> tende a ser mais agressivo.
+                      Atual: {formatNumber(swrPct, 1)}% ·{" "}
+                      <span className="text-[var(--brand-dark)] font-medium">
+                        3,5% é um nível histórico/realista
+                      </span>
+                      ; acima de <span className="font-medium">5%</span> tende a
+                      ser mais agressivo.
                     </div>
                   </div>
                 </div>
@@ -753,11 +784,10 @@ export default function App() {
                     <XAxis
                       dataKey="Meses"
                       ticks={yearTicks}
-                      tickFormatter={(m) =>
-                        `${new Intl.NumberFormat("pt-BR", {
-                          maximumFractionDigits: 0,
-                        }).format(m / 12)}a`
-                      }
+                      tickFormatter={(m) => {
+                        const anos = Math.round(Number(m) / 12);
+                        return `${anos} ${anos === 1 ? "ano" : "anos"}`;
+                      }}
                     />
                     <YAxis
                       tickFormatter={(v) =>
