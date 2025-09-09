@@ -1,3 +1,99 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* ======= Design tokens ======= */
+:root{
+  --brand-dark:#021e19;
+  --brand-lime:#c8e05b;
+  --brand-offwhite:#f4ece6;
+  --brand-gray:#a6a797;
+
+  --radius:16px;
+  --radius-sm:12px;
+  --text:#0f172a;        /* slate-900 */
+  --muted:#475569;       /* slate-600 */
+  --border:#e5e7eb;      /* gray-200 */
+}
+
+/* ======= Base ======= */
+*{ box-sizing:border-box }
+html, body, #root { height:100% }
+body{
+  margin:0;
+  background:var(--brand-offwhite);
+  color:var(--text);
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  line-height:1.35;
+}
+
+/* ======= Elements ======= */
+input, button { font:inherit }
+input{
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:.55rem .75rem;
+  background:#fff;
+  color:var(--text);
+}
+input:focus{
+  outline:0;
+  box-shadow:0 0 0 3px rgba(200,224,91,.45); /* brand lime */
+}
+
+/* Range slider */
+input[type="range"]{
+  width:100%;
+  height:6px;
+  border-radius:999px;
+  background:#e2e8f0; /* slate-200 */
+  appearance:none;
+}
+input[type="range"]::-webkit-slider-thumb{
+  appearance:none;
+  width:18px; height:18px;
+  border-radius:50%;
+  background:var(--brand-dark);
+  border:2px solid #fff;
+  box-shadow:0 0 0 1px rgba(0,0,0,.15);
+  cursor:pointer;
+  margin-top:-6px;
+}
+input[type="range"]::-moz-range-thumb{
+  width:18px; height:18px;
+  border-radius:50%;
+  background:var(--brand-dark);
+  border:2px solid #fff;
+  box-shadow:0 0 0 1px rgba(0,0,0,.15);
+  cursor:pointer;
+}
+
+/* Buttons (fallback caso não use utilitários) */
+button{
+  border-radius:var(--radius-sm);
+  border:1px solid var(--border);
+  background:#fff;
+  color:var(--text);
+  padding:.6rem .9rem;
+  cursor:pointer;
+}
+button:focus-visible{
+  outline:2px solid var(--brand-lime);
+  outline-offset:2px;
+}
+
+/* Cards/sections (fallback) */
+section, .card-like{
+  background:#fff;
+  border:1px solid var(--brand-gray);
+  border-radius:var(--radius);
+}
+
+/* Recharts pequenos ajustes */
+.recharts-default-legend text{ fill:var(--muted); font-size:.8rem }
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line{ stroke:#e2e8f0 }
+
+/* Print: fundo branco e sem sombras/bordas fortes */
+@media print{
+  body{ background:#fff }
+  .no-print{ display:none !important }
+}
