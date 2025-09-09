@@ -58,23 +58,30 @@ const Button: React.FC<{
   </button>
 );
 
+/* ===== Slider com preenchimento (verde à esquerda, cinza à direita) ===== */
 const Slider: React.FC<{
   value: number;
   min: number;
   max: number;
   step: number;
   onChange: (n: number) => void;
-}> = ({ value, min, max, step, onChange }) => (
-  <input
-    type="range"
-    value={value}
-    min={min}
-    max={max}
-    step={step}
-    onChange={(e) => onChange(Number(e.target.value))}
-    className="w-full"
-  />
-);
+}> = ({ value, min, max, step, onChange }) => {
+  const pct = ((value - min) / (max - min)) * 100;
+  return (
+    <input
+      type="range"
+      value={value}
+      min={min}
+      max={max}
+      step={step}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className="w-full h-[6px] rounded-full appearance-none"
+      style={{
+        background: `linear-gradient(to right, var(--brand-lime) ${pct}%, #e2e8f0 ${pct}%)`,
+      }}
+    />
+  );
+};
 
 const Switch: React.FC<{ checked: boolean; onChange: (b: boolean) => void }> = ({
   checked,
@@ -342,15 +349,15 @@ export default function App() {
     ["--brand-gray" as any]: "#a6a797",
   };
 
-  const [showAdvanced, setShowAdvanced] = useState(false); // ← OFF por padrão
-  const [age, setAge] = useState(24); // default 24
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [age, setAge] = useState(24);
   const [retireAge, setRetireAge] = useState(35);
   const [currentWealth, setCurrentWealth] = useState(3_000_000);
-  const [monthlySaving, setMonthlySaving] = useState(0); // aceita negativo
+  const [monthlySaving, setMonthlySaving] = useState(0);
   const [monthlySpend, setMonthlySpend] = useState(60_000);
   const [swrPct, setSwrPct] = useState(3.5); // default 3,5%
   const [accumRealReturn, setAccumRealReturn] = useState(5);
-  const [retireRealReturn, setRetireRealReturn] = useState(3);
+  const [retireRealReturn, setRetireRealReturn] = useState(3.5); // default 3,5%
 
   // contribuições pontuais
   const [lumpSums, setLumpSums] = useState<Lump[]>([]);
@@ -426,15 +433,22 @@ export default function App() {
     return Infinity;
   }, [targetWealth, currentWealth, monthlySaving, lumpSums, monthlyReal]);
 
+  // dados do gráfico (mantém em meses, mas o eixo X mostrará ANOS via ticks)
   const chartData = useMemo(
     () =>
       accumulation.map((row) => ({
-        Mês: row.m,
+        Meses: row.m,
         "Patrimônio projetado (real)": row.wealth,
         "Meta de aposentadoria (SWR)": targetWealth,
       })),
     [accumulation, targetWealth]
   );
+
+  // ticks do eixo X em anos completos (12, 24, 36, …)
+  const yearTicks = useMemo(() => {
+    const totalYears = Math.max(1, Math.ceil(monthsToRetire / 12));
+    return Array.from({ length: totalYears }, (_, i) => (i + 1) * 12);
+  }, [monthsToRetire]);
 
   function addLump() {
     const nextId = (lumpSums[lumpSums.length - 1]?.id || 0) + 1;
@@ -522,7 +536,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* ===== Seção: Contribuições pontuais ===== */}
+            {/* ===== Contribuições pontuais ===== */}
             <div className="rounded-2xl border p-3 mt-4 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <Label>Contribuições pontuais (valor e mês)</Label>
@@ -573,7 +587,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* ===== Seção: SWR & Retornos ===== */}
+            {/* ===== SWR & Retornos ===== */}
             <div className="rounded-2xl border p-3 mt-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
                 {/* SWR (esquerda) */}
@@ -588,7 +602,7 @@ export default function App() {
                       step={0.1}
                     />
                     <div className="text-xs text-slate-500 mt-1">
-                      Atual: {formatNumber(swrPct, 1)}%
+                      Atual: {formatNumber(swrPct, 1)}% · <span className="text-[var(--brand-dark)] font-medium">3,5% é um nível histórico/realista</span>; acima de <span className="font-medium">5%</span> tende a ser mais agressivo.
                     </div>
                   </div>
                 </div>
@@ -679,7 +693,7 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Coluna 3: agora com a barra de progresso */}
+                {/* Coluna 3: barra de progresso */}
                 <div>
                   <p className="text-xs text-slate-500">Status</p>
 
@@ -727,7 +741,7 @@ export default function App() {
             {/* Gráfico */}
             <Section>
               <p className="font-semibold mb-2">
-                Acumulação até a aposentadoria (valores reais)
+                Acumulação até a aposentadoria (valores reais, já ajustados à inflação)
               </p>
               <div className="h-[320px]">
                 <ResponsiveContainer width="100%" height={320}>
@@ -736,7 +750,15 @@ export default function App() {
                     margin={{ top: 10, right: 20, bottom: 0, left: 0 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="Mês" tickFormatter={(v) => `${v}m`} />
+                    <XAxis
+                      dataKey="Meses"
+                      ticks={yearTicks}
+                      tickFormatter={(m) =>
+                        `${new Intl.NumberFormat("pt-BR", {
+                          maximumFractionDigits: 0,
+                        }).format(m / 12)}a`
+                      }
+                    />
                     <YAxis
                       tickFormatter={(v) =>
                         new Intl.NumberFormat("pt-BR", {
@@ -774,11 +796,14 @@ export default function App() {
                 <li>
                   Preencha: idade atual, idade de aposentadoria, patrimônio
                   atual, poupança mensal (aceita negativo) e gasto mensal na
-                  aposentadoria (todos em valores reais).
+                  aposentadoria — <strong>todos em valores reais</strong>{" "}
+                  (ou seja, <strong>já ajustados pela inflação</strong>).
                 </li>
                 <li>
                   Ajuste a <strong>SWR</strong> com o slider; o valor atual
-                  aparece logo abaixo.
+                  aparece logo abaixo. Como referência:{" "}
+                  <strong>3,5% é um nível histórico/realista</strong>, enquanto{" "}
+                  <strong>&gt; 5%</strong> tende a ser mais agressivo.
                 </li>
                 <li>
                   Adicione <strong>contribuições pontuais</strong>
