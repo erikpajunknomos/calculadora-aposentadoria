@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* ======= Design tokens ======= */
 :root{
   --brand-dark:#021e19;
@@ -66,7 +70,7 @@ input[type="range"]::-moz-range-thumb{
   cursor:pointer;
 }
 
-/* Buttons (fallback caso não use utilitários) */
+/* Buttons (fallback) */
 button{
   border-radius:var(--radius-sm);
   border:1px solid var(--border);
@@ -87,12 +91,12 @@ section, .card-like{
   border-radius:var(--radius);
 }
 
-/* Recharts pequenos ajustes */
+/* Recharts ajustes */
 .recharts-default-legend text{ fill:var(--muted); font-size:.8rem }
 .recharts-cartesian-grid-horizontal line,
 .recharts-cartesian-grid-vertical line{ stroke:#e2e8f0 }
 
-/* Print: fundo branco e sem sombras/bordas fortes */
+/* Print */
 @media print{
   body{ background:#fff }
   .no-print{ display:none !important }
