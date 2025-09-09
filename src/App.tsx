@@ -58,29 +58,30 @@ const Button: React.FC<{
   </button>
 );
 
-/* ===== Slider de SWR com preenchimento alinhado ao centro do knob =====
-   - Mede a largura real do trilho e calcula o fim do preenchimento no centro do knob.
-   - Thumb padrão: 18px (ver index.css). Se mudar lá, ajuste THUMB_PX aqui. */
-const THUMB_PX = 18;
-
-const Slider: React.FC<{
+/* ========= Slider de SWR (custom) =========
+   - trilho desenhado em divs
+   - preenchimento verde até o CENTRO do knob
+   - knob estilizado
+   - range invisível captura mouse/teclado (acessível)
+*/
+const SwrSlider: React.FC<{
   value: number;
   min: number;
   max: number;
   step: number;
   onChange: (n: number) => void;
 }> = ({ value, min, max, step, onChange }) => {
-  const ref = useRef<HTMLInputElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(0);
+
   useEffect(() => {
-    const el = ref.current;
+    const el = wrapRef.current;
     const measure = () => setW(el?.offsetWidth ?? 0);
     measure();
     window.addEventListener("resize", measure);
-    const ro = ("ResizeObserver" in window)
-      ? new ResizeObserver(measure)
-      : null;
-    ro?.observe(el as Element);
+    const ro =
+      "ResizeObserver" in window ? new ResizeObserver(measure) : null;
+    if (el && ro) ro.observe(el);
     return () => {
       window.removeEventListener("resize", measure);
       ro?.disconnect();
@@ -88,25 +89,51 @@ const Slider: React.FC<{
   }, []);
 
   const t = Math.max(0, Math.min(1, (value - min) / (max - min)));
-  // posição do centro do thumb: thumb/2 + (w - thumb) * t
-  const center = w > 0 ? (THUMB_PX / 2 + (w - THUMB_PX) * t) : w * t;
-  const fillPct = w > 0 ? (center / w) * 100 : t * 100;
+  const thumb = 20; // diâmetro visual do knob
+  // posição do centro do knob no trilho
+  const center = w ? thumb / 2 + (w - thumb) * t : 0;
+  const fill = Math.max(thumb / 2, Math.min(center, w)); // preenchimento até o centro
 
   return (
-    <input
-      ref={ref}
-      type="range"
-      value={value}
-      min={min}
-      max={max}
-      step={step}
-      onChange={(e) => onChange(Number(e.target.value))}
-      className="w-full h-[8px] rounded-full appearance-none ring-1 ring-[var(--brand-gray)]"
-      style={{
-        background: `linear-gradient(to right, var(--brand-lime) ${fillPct}%, #e2e8f0 ${fillPct}%)`,
-      }}
-      aria-label="SWR (taxa segura de retirada)"
-    />
+    <div className="relative select-none">
+      <div ref={wrapRef} className="relative h-7">
+        {/* trilho base */}
+        <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-2 rounded-full bg-slate-200 ring-1 ring-[var(--brand-gray)]" />
+        {/* preenchimento */}
+        <div
+          className="absolute left-0 top-1/2 -translate-y-1/2 h-2 rounded-full"
+          style={{
+            width: `${fill}px`,
+            background:
+              "linear-gradient(90deg, var(--brand-lime) 0%, #7ed957 100%)",
+          }}
+        />
+        {/* knob */}
+        <div
+          className="absolute -translate-x-1/2 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-[var(--brand-dark)] border-2 border-white shadow ring-1 ring-[var(--brand-gray)]"
+          style={{ left: `${center}px` }}
+        />
+        {/* tooltip */}
+        <div
+          className="absolute -translate-x-1/2 -top-6 text-xs font-medium text-slate-700"
+          style={{ left: `${center}px` }}
+        >
+          {value.toFixed(1)}%
+        </div>
+
+        {/* input invisível (acessível) */}
+        <input
+          type="range"
+          aria-label="SWR (taxa segura de retirada)"
+          className="absolute inset-0 opacity-0 cursor-pointer"
+          value={value}
+          min={min}
+          max={max}
+          step={step}
+          onChange={(e) => onChange(Number(e.target.value))}
+        />
+      </div>
+    </div>
   );
 };
 
@@ -460,7 +487,7 @@ export default function App() {
     return Infinity;
   }, [targetWealth, currentWealth, monthlySaving, lumpSums, monthlyReal]);
 
-  // gráfico: mantemos os dados em meses e formatamos ticks como ANOS
+  // gráfico: dados em meses; ticks formatados como IDADE (começa pela idade atual)
   const chartData = useMemo(
     () =>
       accumulation.map((row) => ({
@@ -472,8 +499,9 @@ export default function App() {
   );
 
   const yearTicks = useMemo(() => {
-    const totalYears = Math.max(1, Math.ceil(monthsToRetire / 12));
-    return Array.from({ length: totalYears }, (_, i) => (i + 1) * 12);
+    const totalYears = Math.max(0, Math.ceil(monthsToRetire / 12));
+    // inclui 0 para mostrar a idade atual como primeiro tick
+    return Array.from({ length: totalYears + 1 }, (_, i) => i * 12);
   }, [monthsToRetire]);
 
   function addLump() {
@@ -620,7 +648,7 @@ export default function App() {
                 <div>
                   <Label>SWR — Taxa segura de retirada (% a.a.)</Label>
                   <div className="mt-2">
-                    <Slider
+                    <SwrSlider
                       value={swrPct}
                       onChange={setSwrPct}
                       min={2.5}
@@ -786,7 +814,8 @@ export default function App() {
                       ticks={yearTicks}
                       tickFormatter={(m) => {
                         const anos = Math.round(Number(m) / 12);
-                        return `${anos} ${anos === 1 ? "ano" : "anos"}`;
+                        const idade = age + anos;
+                        return `${idade} anos`;
                       }}
                     />
                     <YAxis
@@ -831,7 +860,7 @@ export default function App() {
                 </li>
                 <li>
                   Ajuste a <strong>SWR</strong> com o slider; o valor atual
-                  aparece logo abaixo. Como referência:{" "}
+                  aparece acima do botão. Como referência:{" "}
                   <strong>3,5% é um nível histórico/realista</strong>, enquanto{" "}
                   <strong>&gt; 5%</strong> tende a ser mais agressivo.
                 </li>
