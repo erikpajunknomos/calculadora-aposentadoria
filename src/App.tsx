@@ -60,7 +60,7 @@ const Button: React.FC<{
   </button>
 );
 
-/* ========= Slider SWR (custom com tooltip e preenchimento exato) ========= */
+/* ========= Slider SWR (custom, sem tooltip) ========= */
 const SwrSlider: React.FC<{
   value: number;
   min: number;
@@ -90,7 +90,7 @@ const SwrSlider: React.FC<{
   const fill = Math.max(thumb / 2, Math.min(center, w));
 
   return (
-    <div className="relative select-none pt-6"> {/* espaço para tooltip */}
+    <div className="relative select-none pt-2">
       <div ref={wrapRef} className="relative h-8">
         {/* trilho base */}
         <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-2 rounded-full bg-slate-200 ring-1 ring-[var(--brand-gray)]" />
@@ -108,14 +108,6 @@ const SwrSlider: React.FC<{
           className="absolute -translate-x-1/2 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-[var(--brand-dark)] border-2 border-white shadow ring-1 ring-[var(--brand-gray)]"
           style={{ left: `${center}px` }}
         />
-        {/* tooltip (badge) */}
-        <div
-          className="absolute -translate-x-1/2 -top-1 text-xs font-medium text-slate-700 bg-white border border-[var(--brand-gray)] rounded-md px-2 py-[2px] shadow-sm"
-          style={{ left: `${center}px` }}
-        >
-          {value.toFixed(1)}%
-        </div>
-
         {/* input invisível (acessível) */}
         <input
           type="range"
@@ -480,8 +472,11 @@ export default function App() {
     Math.min(100, (100 * wealthAtRetire) / Math.max(targetWealth, 1))
   );
 
+  /* sustentabilidade na aposentadoria */
   const sustainableMonthlySWR = (wealthAtRetire * retireRealReturn) / 100 / 12;
+  const hasPerpetuity = sustainableMonthlySWR >= monthlySpend;
 
+  /* extra por mês para chegar no número mágico no tempo definido */
   const extraMonthlyNeeded =
     gap > 0 && monthsToRetire > 0
       ? gap /
@@ -493,6 +488,7 @@ export default function App() {
         )
       : 0;
 
+  /* runway (anos) dado retorno real na aposentadoria */
   function yearsOfRunway({
     startingWealth,
     annualSpend,
@@ -514,7 +510,7 @@ export default function App() {
     annualSpend: annualRetireSpend,
     realReturnAnnual: retireRealReturn,
   });
-  const isPerpetual = !isFinite(runwayY) || runwayY > 1e6;
+  const endAge = isFinite(runwayY) ? retireAge + runwayY : Infinity;
 
   const monthsToGoalAtCurrentPlan = useMemo(() => {
     if (targetWealth <= 0) return 0;
@@ -545,10 +541,18 @@ export default function App() {
     [fullProjection, targetWealth]
   );
 
-  /* ticks do eixo X por idade (inicia na idade atual) */
+  /* ticks do eixo X por idade, com menos rótulos (~8 labels) */
   const yearTicks = useMemo(() => {
-    return Array.from({ length: Math.floor(monthsTo100 / 12) + 1 }, (_, i) => i * 12);
-  }, [monthsTo100]);
+    const yearsRange = 100 - age;
+    let stepYears = Math.ceil(yearsRange / 8); // ~8 labels
+    if (stepYears >= 5) stepYears = Math.round(stepYears / 5) * 5; // arredonda pra 5 ou 10, etc
+    stepYears = Math.max(2, stepYears);
+    const stepMonths = stepYears * 12;
+    const list: number[] = [];
+    for (let m = 0; m <= monthsTo100; m += stepMonths) list.push(m);
+    if (list[list.length - 1] !== monthsTo100) list.push(monthsTo100);
+    return list;
+  }, [age, monthsTo100]);
 
   /* ações auxiliares */
   const addLump = () =>
@@ -673,7 +677,7 @@ export default function App() {
 
             {/* ===== SWR & Retornos ===== */}
             <div className="rounded-2xl border p-3 mt-4 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">{/* alinhamento no topo */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
                 {/* SWR (esquerda) */}
                 <div>
                   <Label>SWR — Taxa segura de retirada (% a.a.)</Label>
@@ -741,9 +745,10 @@ export default function App() {
                   <p className="text-xs text-slate-500 mt-1">
                     Gasto sustentável (SWR, sem consumir principal): {formatCurrency(sustainableMonthlySWR, "BRL")}/mês
                   </p>
-                  {!isPerpetual ? (
+                  {!hasPerpetuity ? (
                     <p className="text-slate-500 text-xs">
                       Com {formatNumber(retireRealReturn, 1)}% real a.a., isso cobre ~{formatNumber(runwayY, 1)} anos
+                      {isFinite(endAge) ? ` (até ~${formatNumber(endAge, 1)} anos de idade)` : ""}
                     </p>
                   ) : (
                     <p className="text-emerald-600 text-xs">
@@ -758,11 +763,23 @@ export default function App() {
                     <p className="text-xs text-slate-500 mb-1">Percentual do número mágico</p>
                     <ProgressBar value={progressPct} />
                   </div>
+
+                  {!hasPerpetuity && isFinite(runwayY) && (
+                    <p className="text-slate-500 text-xs mt-2">
+                      Cobertura estimada: ~{formatNumber(runwayY, 1)} anos
+                      {isFinite(endAge) ? ` (até ~${formatNumber(endAge, 1)} anos de idade)` : ""}.
+                    </p>
+                  )}
+                  {hasPerpetuity && (
+                    <p className="text-emerald-700 text-xs mt-2">Perpetuidade atingível nas premissas atuais.</p>
+                  )}
+
                   {gap > 0 && monthsToRetire > 0 && extraMonthlyNeeded >= 100 && (
                     <p className="text-slate-500 text-xs mt-2">
                       Poupança extra necessária: {formatCurrency(extraMonthlyNeeded, "BRL")}/mês
                     </p>
                   )}
+
                   {gap > 0 &&
                     isFinite(monthsToGoalAtCurrentPlan) &&
                     monthsToGoalAtCurrentPlan !== 0 && (
@@ -773,7 +790,6 @@ export default function App() {
                           : `${formatNumber(monthsToGoalAtCurrentPlan, 0)} meses`}
                       </p>
                     )}
-                  {gap <= 0 && <p className="text-emerald-700 text-xs mt-2">Meta de perpetuidade atingida</p>}
                 </div>
               </div>
             </Section>
@@ -785,7 +801,7 @@ export default function App() {
               </p>
               <div className="h-[320px]">
                 <ResponsiveContainer width="100%" height={320}>
-                  <AreaChart data={chartData} margin={{ top: 10, right: 20, bottom: 0, left: 0 }}>
+                  <AreaChart data={chartData} margin={{ top: 44, right: 20, bottom: 0, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis
                       dataKey="Meses"
@@ -826,6 +842,7 @@ export default function App() {
                           position: "top",
                           fill: "var(--brand-dark)",
                           fontSize: 12,
+                          offset: 14, // empurra pra baixo pra não cortar
                         }}
                       />
                     )}
@@ -862,9 +879,9 @@ export default function App() {
                   <strong>já ajustados pela inflação</strong>).
                 </li>
                 <li>
-                  Ajuste a <strong>SWR</strong> com o slider; o valor atual aparece no badge acima do botão. Como
-                  referência: <strong>3,5% é um nível histórico/realista</strong>, enquanto <strong>&gt; 5%</strong>{" "}
-                  tende a ser mais agressivo.
+                  Ajuste a <strong>SWR</strong> com o slider; o valor atual aparece logo abaixo. Como referência:{" "}
+                  <strong>3,5% é um nível histórico/realista</strong>, enquanto <strong>&gt; 5%</strong> tende a ser
+                  mais agressivo.
                 </li>
                 <li>
                   Adicione <strong>contribuições pontuais</strong> (vendas/bônus) informando o valor e o mês em que
@@ -872,7 +889,8 @@ export default function App() {
                 </li>
                 <li>
                   Opcional: em <em>Mostrar avançado</em>, ajuste o <strong>retorno real na aposentadoria</strong> para
-                  ver por quantos anos o patrimônio cobre o gasto caso ainda não tenha atingido a perpetuidade.
+                  ver por quantos anos o patrimônio cobre o gasto e **até que idade** você tem cobertura caso ainda não
+                  tenha atingido a perpetuidade.
                 </li>
                 <li>
                   Veja o <strong>número mágico</strong> (meta por SWR), o <strong>patrimônio ao aposentar</strong>, o{" "}
