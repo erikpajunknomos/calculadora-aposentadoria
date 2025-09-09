@@ -7,6 +7,8 @@ import {
   YAxis,
   Area,
   Legend,
+  ReferenceLine,
+  ReferenceArea,
 } from "recharts";
 
 /* ===========================
@@ -58,12 +60,7 @@ const Button: React.FC<{
   </button>
 );
 
-/* ========= Slider de SWR (custom) =========
-   - trilho desenhado em divs
-   - preenchimento verde até o CENTRO do knob
-   - knob estilizado
-   - range invisível captura mouse/teclado (acessível)
-*/
+/* ========= Slider SWR (custom com tooltip e preenchimento exato) ========= */
 const SwrSlider: React.FC<{
   value: number;
   min: number;
@@ -79,8 +76,7 @@ const SwrSlider: React.FC<{
     const measure = () => setW(el?.offsetWidth ?? 0);
     measure();
     window.addEventListener("resize", measure);
-    const ro =
-      "ResizeObserver" in window ? new ResizeObserver(measure) : null;
+    const ro = "ResizeObserver" in window ? new ResizeObserver(measure) : null;
     if (el && ro) ro.observe(el);
     return () => {
       window.removeEventListener("resize", measure);
@@ -89,14 +85,13 @@ const SwrSlider: React.FC<{
   }, []);
 
   const t = Math.max(0, Math.min(1, (value - min) / (max - min)));
-  const thumb = 20; // diâmetro visual do knob
-  // posição do centro do knob no trilho
+  const thumb = 20; // diâmetro do knob
   const center = w ? thumb / 2 + (w - thumb) * t : 0;
-  const fill = Math.max(thumb / 2, Math.min(center, w)); // preenchimento até o centro
+  const fill = Math.max(thumb / 2, Math.min(center, w));
 
   return (
-    <div className="relative select-none">
-      <div ref={wrapRef} className="relative h-7">
+    <div className="relative select-none pt-6"> {/* espaço para tooltip */}
+      <div ref={wrapRef} className="relative h-8">
         {/* trilho base */}
         <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-2 rounded-full bg-slate-200 ring-1 ring-[var(--brand-gray)]" />
         {/* preenchimento */}
@@ -105,7 +100,7 @@ const SwrSlider: React.FC<{
           style={{
             width: `${fill}px`,
             background:
-              "linear-gradient(90deg, var(--brand-lime) 0%, #7ed957 100%)",
+              "linear-gradient(90deg, var(--brand-lime) 0%, #9edf5e 100%)",
           }}
         />
         {/* knob */}
@@ -113,9 +108,9 @@ const SwrSlider: React.FC<{
           className="absolute -translate-x-1/2 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-[var(--brand-dark)] border-2 border-white shadow ring-1 ring-[var(--brand-gray)]"
           style={{ left: `${center}px` }}
         />
-        {/* tooltip */}
+        {/* tooltip (badge) */}
         <div
-          className="absolute -translate-x-1/2 -top-6 text-xs font-medium text-slate-700"
+          className="absolute -translate-x-1/2 -top-1 text-xs font-medium text-slate-700 bg-white border border-[var(--brand-gray)] rounded-md px-2 py-[2px] shadow-sm"
           style={{ left: `${center}px` }}
         >
           {value.toFixed(1)}%
@@ -338,6 +333,8 @@ function monthlyRateFromRealAnnual(realAnnualPct: number) {
   return Math.pow(1 + realAnnualPct / 100, 1 / 12) - 1;
 }
 type Lump = { id: number; month: number; amount: number };
+
+/* projeção até a aposentadoria (só acumulação) */
 function projectToRetirement({
   currentWealth,
   monthlySaving,
@@ -360,42 +357,58 @@ function projectToRetirement({
   }
   for (let t = 0; t <= months; t++) {
     rows.push({ m: t, wealth: W });
-    const oneOff = byMonth.get(t + 1) || 0; // aporte entra no próximo mês
+    const oneOff = byMonth.get(t + 1) || 0;
     W = W * (1 + monthlyRealReturn) + monthlySaving + oneOff;
   }
   return rows;
 }
-function yearsOfRunway({
-  startingWealth,
-  annualSpend,
-  realReturnAnnual,
+
+/* projeção completa até 100 anos: acumula antes e saca depois */
+function projectFullTo100({
+  age,
+  currentWealth,
+  monthsToRetire,
+  monthlySaving,
+  monthlyAccumReturn,
+  monthlyRetireReturn,
+  monthlySpend,
+  lumpSums,
 }: {
-  startingWealth: number;
-  annualSpend: number;
-  realReturnAnnual: number;
+  age: number;
+  currentWealth: number;
+  monthsToRetire: number;
+  monthlySaving: number;
+  monthlyAccumReturn: number;
+  monthlyRetireReturn: number;
+  monthlySpend: number;
+  lumpSums: Lump[];
 }) {
-  const r = realReturnAnnual / 100;
-  if (annualSpend <= 0) return Infinity;
-  if (r === 0) return startingWealth / annualSpend;
-  const ratio = 1 - (startingWealth * r) / annualSpend;
-  if (ratio <= 0) return Infinity;
-  return -Math.log(ratio) / Math.log(1 + r);
-}
-function targetWealthBySWR({
-  annualSpend,
-  swrPct,
-}: {
-  annualSpend: number;
-  swrPct: number;
-}) {
-  return (annualSpend * 100) / swrPct;
+  const monthsTo100 = Math.max(0, (100 - age) * 12);
+  const rows: { m: number; wealth: number }[] = [];
+  let W = currentWealth;
+
+  const byMonth = new Map<number, number>();
+  for (const ls of lumpSums) {
+    const m = Math.max(0, Math.min(monthsToRetire, Math.floor(ls.month)));
+    byMonth.set(m, (byMonth.get(m) || 0) + (Number(ls.amount) || 0));
+  }
+
+  for (let t = 0; t <= monthsTo100; t++) {
+    rows.push({ m: t, wealth: Math.max(0, W) });
+    if (t < monthsToRetire) {
+      const oneOff = byMonth.get(t + 1) || 0;
+      W = W * (1 + monthlyAccumReturn) + monthlySaving + oneOff;
+    } else {
+      W = W * (1 + monthlyRetireReturn) - monthlySpend;
+    }
+  }
+  return rows;
 }
 
 /* ===========================
    APP
 =========================== */
 export default function App() {
-  // tema
   const themeVars = {
     ["--brand-dark" as any]: "#021e19",
     ["--brand-lime" as any]: "#c8e05b",
@@ -409,58 +422,93 @@ export default function App() {
   const [currentWealth, setCurrentWealth] = useState(3_000_000);
   const [monthlySaving, setMonthlySaving] = useState(0);
   const [monthlySpend, setMonthlySpend] = useState(60_000);
-  const [swrPct, setSwrPct] = useState(3.5); // default 3,5%
+  const [swrPct, setSwrPct] = useState(3.5);
   const [accumRealReturn, setAccumRealReturn] = useState(5);
-  const [retireRealReturn, setRetireRealReturn] = useState(3.5); // default 3,5%
-
-  // contribuições pontuais
+  const [retireRealReturn, setRetireRealReturn] = useState(3.5);
   const [lumpSums, setLumpSums] = useState<Lump[]>([]);
 
   const monthsToRetire = Math.max(0, (retireAge - age) * 12);
-  const monthlyReal = monthlyRateFromRealAnnual(accumRealReturn);
+  const monthsTo100 = Math.max(0, (100 - age) * 12);
+  const monthlyAccum = monthlyRateFromRealAnnual(accumRealReturn);
+  const monthlyRetire = monthlyRateFromRealAnnual(retireRealReturn);
 
+  /* acumulação pura (para métricas) */
   const accumulation = useMemo(
     () =>
       projectToRetirement({
         currentWealth,
         monthlySaving,
         months: monthsToRetire,
-        monthlyRealReturn: monthlyReal,
+        monthlyRealReturn: monthlyAccum,
         lumpSums,
       }),
-    [currentWealth, monthlySaving, monthsToRetire, monthlyReal, lumpSums]
+    [currentWealth, monthlySaving, monthsToRetire, monthlyAccum, lumpSums]
   );
   const wealthAtRetire =
     accumulation[accumulation.length - 1]?.wealth ?? currentWealth;
 
+  /* projeção completa até 100 anos (para o gráfico) */
+  const fullProjection = useMemo(
+    () =>
+      projectFullTo100({
+        age,
+        currentWealth,
+        monthsToRetire,
+        monthlySaving,
+        monthlyAccumReturn: monthlyAccum,
+        monthlyRetireReturn: monthlyRetire,
+        monthlySpend,
+        lumpSums,
+      }),
+    [
+      age,
+      currentWealth,
+      monthsToRetire,
+      monthlySaving,
+      monthlyAccum,
+      monthlyRetire,
+      monthlySpend,
+      lumpSums,
+    ]
+  );
+
   const annualRetireSpend = monthlySpend * 12;
-  const targetWealth = targetWealthBySWR({
-    annualSpend: annualRetireSpend,
-    swrPct,
-  });
+  const targetWealth = (annualRetireSpend * 100) / swrPct;
   const gap = targetWealth - wealthAtRetire;
   const progressPct = Math.max(
     0,
     Math.min(100, (100 * wealthAtRetire) / Math.max(targetWealth, 1))
   );
 
-  // gasto sustentável (sem consumir principal)
-  const sustainableMonthlySWR =
-    (wealthAtRetire * retireRealReturn) / 100 / 12;
+  const sustainableMonthlySWR = (wealthAtRetire * retireRealReturn) / 100 / 12;
 
-  // poupança extra/mês necessária para atingir a meta no tempo escolhido
   const extraMonthlyNeeded =
     gap > 0 && monthsToRetire > 0
       ? gap /
         Math.max(
-          monthlyReal > 0
-            ? (Math.pow(1 + monthlyReal, monthsToRetire) - 1) / monthlyReal
+          monthlyAccum > 0
+            ? (Math.pow(1 + monthlyAccum, monthsToRetire) - 1) / monthlyAccum
             : monthsToRetire,
           1
         )
       : 0;
 
-  // quantos anos o patrimônio cobre dado o retorno real na aposentadoria
+  function yearsOfRunway({
+    startingWealth,
+    annualSpend,
+    realReturnAnnual,
+  }: {
+    startingWealth: number;
+    annualSpend: number;
+    realReturnAnnual: number;
+  }) {
+    const r = realReturnAnnual / 100;
+    if (annualSpend <= 0) return Infinity;
+    if (r === 0) return startingWealth / annualSpend;
+    const ratio = 1 - (startingWealth * r) / annualSpend;
+    if (ratio <= 0) return Infinity;
+    return -Math.log(ratio) / Math.log(1 + r);
+  }
   const runwayY = yearsOfRunway({
     startingWealth: wealthAtRetire,
     annualSpend: annualRetireSpend,
@@ -468,7 +516,6 @@ export default function App() {
   });
   const isPerpetual = !isFinite(runwayY) || runwayY > 1e6;
 
-  // estimativa de meses para atingir a meta mantendo plano atual
   const monthsToGoalAtCurrentPlan = useMemo(() => {
     if (targetWealth <= 0) return 0;
     let W = currentWealth;
@@ -477,45 +524,42 @@ export default function App() {
       const m = Math.max(1, Math.floor(ls.month));
       byMonth.set(m, (byMonth.get(m) || 0) + (Number(ls.amount) || 0));
     }
-    const r = monthlyReal;
-    const cap = 1200; // até 100 anos
+    const r = monthlyAccum;
+    const cap = 1200;
     for (let t = 0; t <= cap; t++) {
       if (W >= targetWealth) return t;
       const oneOff = byMonth.get(t + 1) || 0;
       W = W * (1 + r) + monthlySaving + oneOff;
     }
     return Infinity;
-  }, [targetWealth, currentWealth, monthlySaving, lumpSums, monthlyReal]);
+  }, [targetWealth, currentWealth, monthlySaving, lumpSums, monthlyAccum]);
 
-  // gráfico: dados em meses; ticks formatados como IDADE (começa pela idade atual)
+  /* dados do gráfico até 100 anos */
   const chartData = useMemo(
     () =>
-      accumulation.map((row) => ({
+      fullProjection.map((row) => ({
         Meses: row.m,
         "Patrimônio projetado (real)": row.wealth,
         "Meta de aposentadoria (SWR)": targetWealth,
       })),
-    [accumulation, targetWealth]
+    [fullProjection, targetWealth]
   );
 
+  /* ticks do eixo X por idade (inicia na idade atual) */
   const yearTicks = useMemo(() => {
-    const totalYears = Math.max(0, Math.ceil(monthsToRetire / 12));
-    // inclui 0 para mostrar a idade atual como primeiro tick
-    return Array.from({ length: totalYears + 1 }, (_, i) => i * 12);
-  }, [monthsToRetire]);
+    return Array.from({ length: Math.floor(monthsTo100 / 12) + 1 }, (_, i) => i * 12);
+  }, [monthsTo100]);
 
-  function addLump() {
-    const nextId = (lumpSums[lumpSums.length - 1]?.id || 0) + 1;
-    setLumpSums([...lumpSums, { id: nextId, month: 1, amount: 100_000 }]);
-  }
-  function updateLump(id: number, field: "month" | "amount", value: number) {
-    setLumpSums((arr) =>
-      arr.map((ls) => (ls.id === id ? { ...ls, [field]: value } : ls))
-    );
-  }
-  function removeLump(id: number) {
+  /* ações auxiliares */
+  const addLump = () =>
+    setLumpSums((arr) => [
+      ...arr,
+      { id: (arr[arr.length - 1]?.id || 0) + 1, month: 1, amount: 100_000 },
+    ]);
+  const updateLump = (id: number, field: "month" | "amount", value: number) =>
+    setLumpSums((arr) => arr.map((ls) => (ls.id === id ? { ...ls, [field]: value } : ls)));
+  const removeLump = (id: number) =>
     setLumpSums((arr) => arr.filter((ls) => ls.id !== id));
-  }
 
   return (
     <div
@@ -594,22 +638,14 @@ export default function App() {
             <div className="rounded-2xl border p-3 mt-4 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <Label>Contribuições pontuais (valor e mês)</Label>
-                <Button variant="outline" onClick={addLump}>
-                  ＋
-                </Button>
+                <Button variant="outline" onClick={addLump}>＋</Button>
               </div>
               <div className="space-y-2">
                 {lumpSums.map((ls) => (
-                  <div
-                    key={ls.id}
-                    className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:items-end"
-                  >
+                  <div key={ls.id} className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:items-end">
                     <div className="col-span-12 sm:col-span-6">
                       <Label>Valor (BRL)</Label>
-                      <NumericInputBR
-                        value={ls.amount}
-                        onChange={(n) => updateLump(ls.id, "amount", n)}
-                      />
+                      <NumericInputBR value={ls.amount} onChange={(n) => updateLump(ls.id, "amount", n)} />
                     </div>
                     <div className="col-span-12 sm:col-span-4">
                       <Label>Mês em que entra</Label>
@@ -618,51 +654,34 @@ export default function App() {
                         min={1}
                         max={monthsToRetire}
                         value={ls.month}
-                        onChange={(e) =>
-                          updateLump(ls.id, "month", Number(e.target.value) || 1)
-                        }
+                        onChange={(e) => updateLump(ls.id, "month", Number(e.target.value) || 1)}
                       />
                       <p className="text-xs text-slate-500 mt-1 sm:hidden">
                         1 = próximo mês … até {monthsToRetire}
                       </p>
                     </div>
                     <div className="col-span-12 sm:col-span-2 flex justify-start sm:justify-end mt-1 sm:mt-0">
-                      <Button variant="outline" onClick={() => removeLump(ls.id)}>
-                        －
-                      </Button>
+                      <Button variant="outline" onClick={() => removeLump(ls.id)}>－</Button>
                     </div>
                   </div>
                 ))}
                 {lumpSums.length === 0 && (
-                  <p className="text-xs text-slate-500">
-                    Nenhum aporte único adicionado.
-                  </p>
+                  <p className="text-xs text-slate-500">Nenhum aporte único adicionado.</p>
                 )}
               </div>
             </div>
 
             {/* ===== SWR & Retornos ===== */}
             <div className="rounded-2xl border p-3 mt-4 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">{/* alinhamento no topo */}
                 {/* SWR (esquerda) */}
                 <div>
                   <Label>SWR — Taxa segura de retirada (% a.a.)</Label>
-                  <div className="mt-2">
-                    <SwrSlider
-                      value={swrPct}
-                      onChange={setSwrPct}
-                      min={2.5}
-                      max={8}
-                      step={0.1}
-                    />
-                    <div className="text-xs text-slate-500 mt-1">
-                      Atual: {formatNumber(swrPct, 1)}% ·{" "}
-                      <span className="text-[var(--brand-dark)] font-medium">
-                        3,5% é um nível histórico/realista
-                      </span>
-                      ; acima de <span className="font-medium">5%</span> tende a
-                      ser mais agressivo.
-                    </div>
+                  <SwrSlider value={swrPct} onChange={setSwrPct} min={2.5} max={8} step={0.1} />
+                  <div className="text-xs text-slate-500 mt-1">
+                    Atual: {formatNumber(swrPct, 1)}% ·{" "}
+                    <span className="text-[var(--brand-dark)] font-medium">3,5% é um nível histórico/realista</span>;
+                    acima de <span className="font-medium">5%</span> tende a ser mais agressivo.
                   </div>
                 </div>
 
@@ -673,9 +692,7 @@ export default function App() {
                     type="number"
                     step={0.1}
                     value={accumRealReturn}
-                    onChange={(e) =>
-                      setAccumRealReturn(Number(e.target.value) || 0)
-                    }
+                    onChange={(e) => setAccumRealReturn(Number(e.target.value) || 0)}
                   />
                 </div>
 
@@ -689,9 +706,7 @@ export default function App() {
                         type="number"
                         step={0.1}
                         value={retireRealReturn}
-                        onChange={(e) =>
-                          setRetireRealReturn(Number(e.target.value) || 0)
-                        }
+                        onChange={(e) => setRetireRealReturn(Number(e.target.value) || 0)}
                       />
                     </div>
                   </>
@@ -711,88 +726,54 @@ export default function App() {
             {/* Painel 3 colunas */}
             <Section>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Coluna 1 */}
                 <div>
                   <p className="text-xs text-slate-500">Número mágico (SWR)</p>
-                  <p className="text-2xl font-semibold">
-                    {formatCurrency(targetWealth, "BRL")}
-                  </p>
+                  <p className="text-2xl font-semibold">{formatCurrency(targetWealth, "BRL")}</p>
                   <p className="text-slate-500 text-sm">
-                    {formatNumber(swrPct, 1)}% a.a. com gasto de{" "}
-                    {formatCurrency(monthlySpend, "BRL")}/mês
+                    {formatNumber(swrPct, 1)}% a.a. com gasto de {formatCurrency(monthlySpend, "BRL")}/mês
                   </p>
                 </div>
 
-                {/* Coluna 2 */}
                 <div>
-                  <p className="text-xs text-slate-500">
-                    Patrimônio ao aposentar
-                  </p>
-                  <p className="text-2xl font-semibold">
-                    {formatCurrency(wealthAtRetire, "BRL")}
-                  </p>
-                  <p className="text-slate-500 text-sm">
-                    Horizonte: {Math.round(monthsToRetire / 12)} anos
-                  </p>
+                  <p className="text-xs text-slate-500">Patrimônio ao aposentar</p>
+                  <p className="text-2xl font-semibold">{formatCurrency(wealthAtRetire, "BRL")}</p>
+                  <p className="text-slate-500 text-sm">Horizonte: {Math.round(monthsToRetire / 12)} anos</p>
                   <p className="text-xs text-slate-500 mt-1">
-                    Gasto sustentável (SWR, sem consumir principal):{" "}
-                    {formatCurrency(sustainableMonthlySWR, "BRL")}/mês
+                    Gasto sustentável (SWR, sem consumir principal): {formatCurrency(sustainableMonthlySWR, "BRL")}/mês
                   </p>
-                  {!isPerpetual && (
+                  {!isPerpetual ? (
                     <p className="text-slate-500 text-xs">
-                      Com {formatNumber(retireRealReturn, 1)}% real a.a., isso
-                      cobre ~{formatNumber(runwayY, 1)} anos
+                      Com {formatNumber(retireRealReturn, 1)}% real a.a., isso cobre ~{formatNumber(runwayY, 1)} anos
                     </p>
-                  )}
-                  {isPerpetual && (
+                  ) : (
                     <p className="text-emerald-600 text-xs">
-                      Perpetuidade estimada com{" "}
-                      {formatNumber(retireRealReturn, 1)}% real a.a.
+                      Perpetuidade estimada com {formatNumber(retireRealReturn, 1)}% real a.a.
                     </p>
                   )}
                 </div>
 
-                {/* Coluna 3: barra de progresso */}
                 <div>
                   <p className="text-xs text-slate-500">Status</p>
-
                   <div className="mt-2">
-                    <p className="text-xs text-slate-500 mb-1">
-                      Percentual do número mágico
-                    </p>
+                    <p className="text-xs text-slate-500 mb-1">Percentual do número mágico</p>
                     <ProgressBar value={progressPct} />
                   </div>
-
                   {gap > 0 && monthsToRetire > 0 && extraMonthlyNeeded >= 100 && (
                     <p className="text-slate-500 text-xs mt-2">
-                      Poupança extra necessária:{" "}
-                      {formatCurrency(extraMonthlyNeeded, "BRL")}/mês
+                      Poupança extra necessária: {formatCurrency(extraMonthlyNeeded, "BRL")}/mês
                     </p>
                   )}
-
                   {gap > 0 &&
                     isFinite(monthsToGoalAtCurrentPlan) &&
                     monthsToGoalAtCurrentPlan !== 0 && (
                       <p className="text-slate-500 text-xs">
-                        Mantendo a poupança atual
-                        {lumpSums.length ? " e os aportes" : ""}, meta em ~
+                        Mantendo a poupança atual{lumpSums.length ? " e os aportes" : ""}, meta em ~
                         {monthsToGoalAtCurrentPlan > 24
-                          ? `${formatNumber(
-                              monthsToGoalAtCurrentPlan / 12,
-                              1
-                            )} anos`
-                          : `${formatNumber(
-                              monthsToGoalAtCurrentPlan,
-                              0
-                            )} meses`}
+                          ? `${formatNumber(monthsToGoalAtCurrentPlan / 12, 1)} anos`
+                          : `${formatNumber(monthsToGoalAtCurrentPlan, 0)} meses`}
                       </p>
                     )}
-
-                  {gap <= 0 && (
-                    <p className="text-emerald-700 text-xs mt-2">
-                      Meta de perpetuidade atingida
-                    </p>
-                  )}
+                  {gap <= 0 && <p className="text-emerald-700 text-xs mt-2">Meta de perpetuidade atingida</p>}
                 </div>
               </div>
             </Section>
@@ -804,10 +785,7 @@ export default function App() {
               </p>
               <div className="h-[320px]">
                 <ResponsiveContainer width="100%" height={320}>
-                  <AreaChart
-                    data={chartData}
-                    margin={{ top: 10, right: 20, bottom: 0, left: 0 }}
-                  >
+                  <AreaChart data={chartData} margin={{ top: 10, right: 20, bottom: 0, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis
                       dataKey="Meses"
@@ -826,6 +804,32 @@ export default function App() {
                         }).format(v)
                       }
                     />
+
+                    {/* faixa pós-aposentadoria */}
+                    {monthsToRetire > 0 && (
+                      <ReferenceArea
+                        x1={monthsToRetire}
+                        x2={monthsTo100}
+                        fill="var(--brand-dark)"
+                        fillOpacity={0.05}
+                      />
+                    )}
+
+                    {/* linha pontilhada da aposentadoria */}
+                    {monthsToRetire > 0 && (
+                      <ReferenceLine
+                        x={monthsToRetire}
+                        stroke="var(--brand-dark)"
+                        strokeDasharray="4 4"
+                        label={{
+                          value: `Aposentadoria (${retireAge} anos)`,
+                          position: "top",
+                          fill: "var(--brand-dark)",
+                          fontSize: 12,
+                        }}
+                      />
+                    )}
+
                     <Legend />
                     <Area
                       type="monotone"
@@ -853,38 +857,30 @@ export default function App() {
               <p className="font-semibold mb-2">Como usar (rápido)</p>
               <ol className="list-decimal pl-5 space-y-1 text-sm text-slate-700">
                 <li>
-                  Preencha: idade atual, idade de aposentadoria, patrimônio
-                  atual, poupança mensal (aceita negativo) e gasto mensal na
-                  aposentadoria — <strong>todos em valores reais</strong>{" "}
-                  (ou seja, <strong>já ajustados pela inflação</strong>).
+                  Preencha: idade atual, idade de aposentadoria, patrimônio atual, poupança mensal (aceita negativo) e
+                  gasto mensal na aposentadoria — <strong>todos em valores reais</strong> (ou seja,{" "}
+                  <strong>já ajustados pela inflação</strong>).
                 </li>
                 <li>
-                  Ajuste a <strong>SWR</strong> com o slider; o valor atual
-                  aparece acima do botão. Como referência:{" "}
-                  <strong>3,5% é um nível histórico/realista</strong>, enquanto{" "}
-                  <strong>&gt; 5%</strong> tende a ser mais agressivo.
+                  Ajuste a <strong>SWR</strong> com o slider; o valor atual aparece no badge acima do botão. Como
+                  referência: <strong>3,5% é um nível histórico/realista</strong>, enquanto <strong>&gt; 5%</strong>{" "}
+                  tende a ser mais agressivo.
                 </li>
                 <li>
-                  Adicione <strong>contribuições pontuais</strong>
-                  (vendas/bônus) informando o valor e o mês em que entram.
+                  Adicione <strong>contribuições pontuais</strong> (vendas/bônus) informando o valor e o mês em que
+                  entram.
                 </li>
                 <li>
-                  Opcional: em <em>Mostrar avançado</em>, ajuste o{" "}
-                  <strong>retorno real na aposentadoria</strong> para ver por
-                  quantos anos o patrimônio cobre o gasto caso ainda não tenha
-                  atingido a perpetuidade.
+                  Opcional: em <em>Mostrar avançado</em>, ajuste o <strong>retorno real na aposentadoria</strong> para
+                  ver por quantos anos o patrimônio cobre o gasto caso ainda não tenha atingido a perpetuidade.
                 </li>
                 <li>
-                  Veja o <strong>número mágico</strong> (meta por SWR), o{" "}
-                  <strong>patrimônio ao aposentar</strong>, o{" "}
-                  <strong>gasto sustentável</strong> e, se faltar, a{" "}
-                  <strong>poupança extra necessária</strong> e o tempo estimado
-                  para atingir a meta.
+                  Veja o <strong>número mágico</strong> (meta por SWR), o <strong>patrimônio ao aposentar</strong>, o{" "}
+                  <strong>gasto sustentável</strong> e, se faltar, a <strong>poupança extra necessária</strong> e o
+                  tempo estimado para atingir a meta.
                 </li>
               </ol>
-              <p className="text-xs text-slate-500 mt-2">
-                MVP educativo; não é aconselhamento financeiro.
-              </p>
+              <p className="text-xs text-slate-500 mt-2">MVP educativo; não é aconselhamento financeiro.</p>
             </Section>
           </div>
         </div>
