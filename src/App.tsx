@@ -584,9 +584,16 @@ export default function App() {
               Calculadora de Aposentadoria para Atletas
             </h1>
           </div>
-          <Button variant="outline" onClick={() => window.print()}>
-            Exportar PDF
-          </Button>
+
+          {/* Botão WhatsApp */}
+          <a
+            href="https://api.whatsapp.com/send?phone=5521986243416&text=Ol%C3%A1%21+Estava+mexendo+na+calculadora+de+aposentadoria+da+Nomos+Sports.+Podemos+bater+um+papo%3F"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 h-10 rounded-xl px-4 text-sm font-medium bg-[#25D366] text-white hover:brightness-95"
+          >
+            Falar com um especialista no WhatsApp
+          </a>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
@@ -842,7 +849,7 @@ export default function App() {
                           position: "top",
                           fill: "var(--brand-dark)",
                           fontSize: 12,
-                          offset: 14, // empurra pra baixo pra não cortar
+                          offset: 14, // evita corte
                         }}
                       />
                     )}
@@ -889,8 +896,8 @@ export default function App() {
                 </li>
                 <li>
                   Opcional: em <em>Mostrar avançado</em>, ajuste o <strong>retorno real na aposentadoria</strong> para
-                  ver por quantos anos o patrimônio cobre o gasto e **até que idade** você tem cobertura caso ainda não
-                  tenha atingido a perpetuidade.
+                  ver por quantos anos o patrimônio cobre o gasto e{" "}
+                  <strong>até que idade</strong> você tem cobertura caso ainda não tenha atingido a perpetuidade.
                 </li>
                 <li>
                   Veja o <strong>número mágico</strong> (meta por SWR), o <strong>patrimônio ao aposentar</strong>, o{" "}
