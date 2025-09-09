@@ -60,7 +60,7 @@ const Button: React.FC<{
   </button>
 );
 
-/* ========= Slider SWR (custom, sem tooltip) ========= */
+/* ========= Slider SWR (custom, sem tooltip acima) ========= */
 const SwrSlider: React.FC<{
   value: number;
   min: number;
@@ -120,6 +120,10 @@ const SwrSlider: React.FC<{
           onChange={(e) => onChange(Number(e.target.value))}
         />
       </div>
+      <div className="mt-1 text-xs text-slate-500">
+        Atual: {formatNumber(value, 1)}% ·{" "}
+        <span className="text-[var(--brand-dark)] font-medium">3,5% é um nível histórico/realista</span>; acima de <span className="font-medium">5%</span> tende a ser mais agressivo.
+      </div>
     </div>
   );
 };
@@ -153,20 +157,15 @@ const Switch: React.FC<{ checked: boolean; onChange: (b: boolean) => void }> = (
 const ProgressBar: React.FC<{ value: number }> = ({ value }) => {
   const pct = Math.max(0, Math.min(100, value));
   return (
-    <div>
-      <div
-        className="h-3 w-full rounded-full bg-slate-200/70 overflow-hidden ring-1 ring-[var(--brand-gray)]"
-        role="progressbar"
-        aria-label="Percentual do número mágico"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={pct}
-      >
-        <div className="h-full bg-[var(--brand-dark)]" style={{ width: `${pct}%` }} />
-      </div>
-      <div className="mt-1 text-xs text-slate-600 text-right">
-        {new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(pct)}%
-      </div>
+    <div
+      className="h-3 w-full rounded-full bg-slate-200/70 overflow-hidden ring-1 ring-[var(--brand-gray)]"
+      role="progressbar"
+      aria-label="Percentual do número mágico"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={pct}
+    >
+      <div className="h-full bg-[var(--brand-dark)]" style={{ width: `${pct}%` }} />
     </div>
   );
 };
@@ -184,8 +183,7 @@ function parseDigits(s: string) {
 }
 function countDigitsLeft(str: string, pos: number) {
   let c = 0;
-  for (let i = 0; i < Math.max(0, Math.min(pos, str.length)); i++)
-    if (/\d/.test(str[i])) c++;
+  for (let i = 0; i < Math.max(0, Math.min(pos, str.length)); i++) if (/\d/.test(str[i])) c++;
   return c;
 }
 function posFromDigitsCount(str: string, digitsCount: number) {
@@ -236,15 +234,7 @@ function NumericInputBR({
       el.setSelectionRange(caret, caret);
     });
   }
-  return (
-    <BaseInput
-      ref={ref}
-      inputMode="numeric"
-      placeholder={placeholder}
-      value={text}
-      onChange={handleChange}
-    />
-  );
+  return <BaseInput ref={ref} inputMode="numeric" placeholder={placeholder} value={text} onChange={handleChange} />;
 }
 function NumericInputBRSigned({
   value,
@@ -257,18 +247,13 @@ function NumericInputBRSigned({
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [text, setText] = useState(
-    value || value === 0
-      ? (value < 0 ? "-" : "") + formatBRInt(Math.abs(value))
-      : ""
+    value || value === 0 ? (value < 0 ? "-" : "") + formatBRInt(Math.abs(value)) : ""
   );
   useEffect(() => {
-    const next =
-      value || value === 0
-        ? (value < 0 ? "-" : "") + formatBRInt(Math.abs(value))
-        : "";
+    const next = value || value === 0 ? (value < 0 ? "-" : "") + formatBRInt(Math.abs(value)) : "";
     if (next !== text) setText(next);
   }, [value]);
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleChange(e: React.Change<HTMLInputElement>) {
     const raw = e.target.value.trim();
     const isNeg = raw.startsWith("-");
     const only = raw.replace(/\D+/g, "");
@@ -293,15 +278,7 @@ function NumericInputBRSigned({
       el.setSelectionRange(caret, caret);
     });
   }
-  return (
-    <BaseInput
-      ref={ref}
-      inputMode="numeric"
-      placeholder={placeholder}
-      value={text}
-      onChange={handleChange}
-    />
-  );
+  return <BaseInput ref={ref} inputMode="numeric" placeholder={placeholder} value={text} onChange={handleChange} />;
 }
 
 /* ===========================
@@ -317,9 +294,7 @@ function formatCurrency(value: number, code = "BRL") {
 }
 function formatNumber(value: number, digits = 2) {
   if (!isFinite(value)) return "-";
-  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: digits }).format(
-    value
-  );
+  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: digits }).format(value);
 }
 function monthlyRateFromRealAnnual(realAnnualPct: number) {
   return Math.pow(1 + realAnnualPct / 100, 1 / 12) - 1;
@@ -436,8 +411,7 @@ export default function App() {
       }),
     [currentWealth, monthlySaving, monthsToRetire, monthlyAccum, lumpSums]
   );
-  const wealthAtRetire =
-    accumulation[accumulation.length - 1]?.wealth ?? currentWealth;
+  const wealthAtRetire = accumulation[accumulation.length - 1]?.wealth ?? currentWealth;
 
   /* projeção completa até 100 anos (para o gráfico) */
   const fullProjection = useMemo(
@@ -452,25 +426,14 @@ export default function App() {
         monthlySpend,
         lumpSums,
       }),
-    [
-      age,
-      currentWealth,
-      monthsToRetire,
-      monthlySaving,
-      monthlyAccum,
-      monthlyRetire,
-      monthlySpend,
-      lumpSums,
-    ]
+    [age, currentWealth, monthsToRetire, monthlySaving, monthlyAccum, monthlyRetire, monthlySpend, lumpSums]
   );
 
   const annualRetireSpend = monthlySpend * 12;
   const targetWealth = (annualRetireSpend * 100) / swrPct;
   const gap = targetWealth - wealthAtRetire;
-  const progressPct = Math.max(
-    0,
-    Math.min(100, (100 * wealthAtRetire) / Math.max(targetWealth, 1))
-  );
+  const progressPct = Math.max(0, Math.min(100, (100 * wealthAtRetire) / Math.max(targetWealth, 1)));
+  const diff = wealthAtRetire - targetWealth; // positivo = sobrou; negativo = falta
 
   /* sustentabilidade na aposentadoria */
   const sustainableMonthlySWR = (wealthAtRetire * retireRealReturn) / 100 / 12;
@@ -479,13 +442,7 @@ export default function App() {
   /* extra por mês para chegar no número mágico no tempo definido */
   const extraMonthlyNeeded =
     gap > 0 && monthsToRetire > 0
-      ? gap /
-        Math.max(
-          monthlyAccum > 0
-            ? (Math.pow(1 + monthlyAccum, monthsToRetire) - 1) / monthlyAccum
-            : monthsToRetire,
-          1
-        )
+      ? gap / Math.max(monthlyAccum > 0 ? (Math.pow(1 + monthlyAccum, monthsToRetire) - 1) / monthlyAccum : monthsToRetire, 1)
       : 0;
 
   /* runway (anos) dado retorno real na aposentadoria */
@@ -505,11 +462,7 @@ export default function App() {
     if (ratio <= 0) return Infinity;
     return -Math.log(ratio) / Math.log(1 + r);
   }
-  const runwayY = yearsOfRunway({
-    startingWealth: wealthAtRetire,
-    annualSpend: annualRetireSpend,
-    realReturnAnnual: retireRealReturn,
-  });
+  const runwayY = yearsOfRunway({ startingWealth: wealthAtRetire, annualSpend: annualRetireSpend, realReturnAnnual: retireRealReturn });
   const endAge = isFinite(runwayY) ? retireAge + runwayY : Infinity;
 
   const monthsToGoalAtCurrentPlan = useMemo(() => {
@@ -544,8 +497,8 @@ export default function App() {
   /* ticks do eixo X por idade, com menos rótulos (~8 labels) */
   const yearTicks = useMemo(() => {
     const yearsRange = 100 - age;
-    let stepYears = Math.ceil(yearsRange / 8); // ~8 labels
-    if (stepYears >= 5) stepYears = Math.round(stepYears / 5) * 5; // arredonda pra 5 ou 10, etc
+    let stepYears = Math.ceil(yearsRange / 8);
+    if (stepYears >= 5) stepYears = Math.round(stepYears / 5) * 5;
     stepYears = Math.max(2, stepYears);
     const stepMonths = stepYears * 12;
     const list: number[] = [];
@@ -555,32 +508,18 @@ export default function App() {
   }, [age, monthsTo100]);
 
   /* ações auxiliares */
-  const addLump = () =>
-    setLumpSums((arr) => [
-      ...arr,
-      { id: (arr[arr.length - 1]?.id || 0) + 1, month: 1, amount: 100_000 },
-    ]);
-  const updateLump = (id: number, field: "month" | "amount", value: number) =>
-    setLumpSums((arr) => arr.map((ls) => (ls.id === id ? { ...ls, [field]: value } : ls)));
-  const removeLump = (id: number) =>
-    setLumpSums((arr) => arr.filter((ls) => ls.id !== id));
+  const addLump = () => setLumpSums((arr) => [...arr, { id: (arr[arr.length - 1]?.id || 0) + 1, month: 1, amount: 100_000 }]);
+  const updateLump = (id: number, field: "month" | "amount", value: number) => setLumpSums((arr) => arr.map((ls) => (ls.id === id ? { ...ls, [field]: value } : ls)));
+  const removeLump = (id: number) => setLumpSums((arr) => arr.filter((ls) => ls.id !== id));
 
   return (
-    <div
-      className="min-h-screen w-full p-4 sm:p-8"
-      style={{ ...themeVars, backgroundColor: "var(--brand-offwhite)" }}
-    >
+    <div className="min-h-screen w-full p-4 sm:p-8" style={{ ...themeVars, backgroundColor: "var(--brand-offwhite)" }}>
       <div className="mx-auto max-w-7xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-4">
-            <span className="px-3 py-1 rounded-md bg-[var(--brand-dark)] text-[var(--brand-lime)] font-semibold">
-              Nomos Sports
-            </span>
-            <h1
-              className="text-3xl sm:text-4xl font-extrabold tracking-tight"
-              style={{ color: "var(--brand-dark)" }}
-            >
+            <span className="px-3 py-1 rounded-md bg-[var(--brand-dark)] text-[var(--brand-lime)] font-semibold">Nomos Sports</span>
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight" style={{ color: "var(--brand-dark)" }}>
               Calculadora de Aposentadoria para Atletas
             </h1>
           </div>
@@ -605,43 +544,23 @@ export default function App() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Idade atual</Label>
-                <BaseInput
-                  type="number"
-                  value={age}
-                  onChange={(e) => setAge(Number(e.target.value) || 0)}
-                />
+                <BaseInput type="number" value={age} onChange={(e) => setAge(Number(e.target.value) || 0)} />
               </div>
               <div>
                 <Label>Idade de aposentadoria</Label>
-                <BaseInput
-                  type="number"
-                  value={retireAge}
-                  onChange={(e) => setRetireAge(Number(e.target.value) || 0)}
-                />
+                <BaseInput type="number" value={retireAge} onChange={(e) => setRetireAge(Number(e.target.value) || 0)} />
               </div>
               <div className="col-span-2">
                 <Label>Patrimônio atual (BRL)</Label>
-                <NumericInputBR
-                  value={currentWealth}
-                  onChange={setCurrentWealth}
-                  placeholder="0"
-                />
+                <NumericInputBR value={currentWealth} onChange={setCurrentWealth} placeholder="0" />
               </div>
               <div className="col-span-2">
                 <Label>Poupança mensal (BRL)</Label>
-                <NumericInputBRSigned
-                  value={monthlySaving}
-                  onChange={setMonthlySaving}
-                  placeholder="0"
-                />
+                <NumericInputBRSigned value={monthlySaving} onChange={setMonthlySaving} placeholder="0" />
               </div>
               <div className="col-span-2">
                 <Label>Gasto mensal na aposentadoria (BRL)</Label>
-                <NumericInputBR
-                  value={monthlySpend}
-                  onChange={setMonthlySpend}
-                  placeholder="0"
-                />
+                <NumericInputBR value={monthlySpend} onChange={setMonthlySpend} placeholder="0" />
               </div>
             </div>
 
@@ -660,70 +579,48 @@ export default function App() {
                     </div>
                     <div className="col-span-12 sm:col-span-4">
                       <Label>Mês em que entra</Label>
-                      <BaseInput
-                        type="number"
-                        min={1}
-                        max={monthsToRetire}
-                        value={ls.month}
-                        onChange={(e) => updateLump(ls.id, "month", Number(e.target.value) || 1)}
-                      />
-                      <p className="text-xs text-slate-500 mt-1 sm:hidden">
-                        1 = próximo mês … até {monthsToRetire}
-                      </p>
+                      <BaseInput type="number" min={1} max={monthsToRetire} value={ls.month} onChange={(e) => updateLump(ls.id, "month", Number(e.target.value) || 1)} />
+                      <p className="text-xs text-slate-500 mt-1 sm:hidden">1 = próximo mês … até {monthsToRetire}</p>
                     </div>
                     <div className="col-span-12 sm:col-span-2 flex justify-start sm:justify-end mt-1 sm:mt-0">
                       <Button variant="outline" onClick={() => removeLump(ls.id)}>－</Button>
                     </div>
                   </div>
                 ))}
-                {lumpSums.length === 0 && (
-                  <p className="text-xs text-slate-500">Nenhum aporte único adicionado.</p>
-                )}
+                {lumpSums.length === 0 && <p className="text-xs text-slate-500">Nenhum aporte único adicionado.</p>}
               </div>
             </div>
 
             {/* ===== SWR & Retornos ===== */}
             <div className="rounded-2xl border p-3 mt-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
-                {/* SWR (esquerda) */}
+                {/* SWR */}
                 <div>
                   <Label>SWR — Taxa segura de retirada (% a.a.)</Label>
                   <SwrSlider value={swrPct} onChange={setSwrPct} min={2.5} max={8} step={0.1} />
-                  <div className="text-xs text-slate-500 mt-1">
-                    Atual: {formatNumber(swrPct, 1)}% ·{" "}
-                    <span className="text-[var(--brand-dark)] font-medium">3,5% é um nível histórico/realista</span>;
-                    acima de <span className="font-medium">5%</span> tende a ser mais agressivo.
-                  </div>
                 </div>
-
-                {/* Retorno na acumulação (direita) */}
+                {/* Retorno na acumulação */}
                 <div>
                   <Label>Retorno real na acumulação (% a.a.)</Label>
-                  <BaseInput
-                    type="number"
-                    step={0.1}
-                    value={accumRealReturn}
-                    onChange={(e) => setAccumRealReturn(Number(e.target.value) || 0)}
-                  />
+                  <BaseInput type="number" step={0.1} value={accumRealReturn} onChange={(e) => setAccumRealReturn(Number(e.target.value) || 0)} />
                 </div>
-
-                {/* Avançado: retorno na aposentadoria (alinhado à direita) */}
+                {/* Avançado: retorno na aposentadoria */}
                 {showAdvanced && (
                   <>
                     <div aria-hidden className="hidden sm:block" />
                     <div>
                       <Label>Retorno real na aposentadoria (% a.a.)</Label>
-                      <BaseInput
-                        type="number"
-                        step={0.1}
-                        value={retireRealReturn}
-                        onChange={(e) => setRetireRealReturn(Number(e.target.value) || 0)}
-                      />
+                      <BaseInput type="number" step={0.1} value={retireRealReturn} onChange={(e) => setRetireRealReturn(Number(e.target.value) || 0)} />
                     </div>
                   </>
                 )}
               </div>
-
+              {/* Aviso quando SWR ≠ retorno na aposentadoria */}
+              {showAdvanced && Math.abs(swrPct - retireRealReturn) > 0.01 && (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 text-amber-900 px-3 py-2 text-xs">
+                  <span className="font-semibold">Atenção:</span> o SWR informado ({formatNumber(swrPct,1)}%) é diferente do retorno real na aposentadoria ({formatNumber(retireRealReturn,1)}%). Atingir o número mágico não garante perpetuidade quando o retorno for menor que o SWR.
+                </div>
+              )}
               {/* Toggle avançado */}
               <div className="flex items-center gap-2">
                 <Switch checked={showAdvanced} onChange={setShowAdvanced} />
@@ -734,78 +631,100 @@ export default function App() {
 
           {/* Outputs */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Painel 3 colunas */}
+            {/* HERO: Número mágico + Progresso */}
             <Section>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <p className="text-xs text-slate-500">Número mágico (SWR)</p>
-                  <p className="text-2xl font-semibold">{formatCurrency(targetWealth, "BRL")}</p>
-                  <p className="text-slate-500 text-sm">
-                    {formatNumber(swrPct, 1)}% a.a. com gasto de {formatCurrency(monthlySpend, "BRL")}/mês
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs text-slate-500">Patrimônio ao aposentar</p>
-                  <p className="text-2xl font-semibold">{formatCurrency(wealthAtRetire, "BRL")}</p>
-                  <p className="text-slate-500 text-sm">Horizonte: {Math.round(monthsToRetire / 12)} anos</p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Gasto sustentável (SWR, sem consumir principal): {formatCurrency(sustainableMonthlySWR, "BRL")}/mês
-                  </p>
-                  {!hasPerpetuity ? (
-                    <p className="text-slate-500 text-xs">
-                      Com {formatNumber(retireRealReturn, 1)}% real a.a., isso cobre ~{formatNumber(runwayY, 1)} anos
-                      {isFinite(endAge) ? ` (até ~${formatNumber(endAge, 1)} anos de idade)` : ""}
-                    </p>
-                  ) : (
-                    <p className="text-emerald-600 text-xs">
-                      Perpetuidade estimada com {formatNumber(retireRealReturn, 1)}% real a.a.
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <p className="text-xs text-slate-500">Status</p>
-                  <div className="mt-2">
-                    <p className="text-xs text-slate-500 mb-1">Percentual do número mágico</p>
-                    <ProgressBar value={progressPct} />
+              <div className="grid md:grid-cols-5 gap-6 items-center">
+                {/* Número mágico super destacado */}
+                <div className="md:col-span-3">
+                  <div className="text-xs text-slate-500">Número mágico (SWR)</div>
+                  <div className="mt-1 text-4xl md:text-5xl font-extrabold tracking-tight text-[var(--brand-dark)]">
+                    {formatCurrency(targetWealth, "BRL")}
                   </div>
+                  <div className="text-slate-600 text-sm">
+                    {formatNumber(swrPct, 1)}% a.a. com gasto de {formatCurrency(monthlySpend, "BRL")}/mês
+                  </div>
+                </div>
 
-                  {!hasPerpetuity && isFinite(runwayY) && (
-                    <p className="text-slate-500 text-xs mt-2">
-                      Cobertura estimada: ~{formatNumber(runwayY, 1)} anos
-                      {isFinite(endAge) ? ` (até ~${formatNumber(endAge, 1)} anos de idade)` : ""}.
-                    </p>
-                  )}
-                  {hasPerpetuity && (
-                    <p className="text-emerald-700 text-xs mt-2">Perpetuidade atingível nas premissas atuais.</p>
-                  )}
-
-                  {gap > 0 && monthsToRetire > 0 && extraMonthlyNeeded >= 100 && (
-                    <p className="text-slate-500 text-xs mt-2">
-                      Poupança extra necessária: {formatCurrency(extraMonthlyNeeded, "BRL")}/mês
-                    </p>
-                  )}
-
-                  {gap > 0 &&
-                    isFinite(monthsToGoalAtCurrentPlan) &&
-                    monthsToGoalAtCurrentPlan !== 0 && (
-                      <p className="text-slate-500 text-xs">
-                        Mantendo a poupança atual{lumpSums.length ? " e os aportes" : ""}, meta em ~
-                        {monthsToGoalAtCurrentPlan > 24
-                          ? `${formatNumber(monthsToGoalAtCurrentPlan / 12, 1)} anos`
-                          : `${formatNumber(monthsToGoalAtCurrentPlan, 0)} meses`}
-                      </p>
+                {/* Progresso consolidado ao lado */}
+                <div className="md:col-span-2">
+                  <div className="text-xs text-slate-500">Progresso rumo ao número mágico</div>
+                  <div className="mt-1 text-3xl font-bold tabular-nums">
+                    {new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(progressPct)}%
+                  </div>
+                  <div className="mt-2"><ProgressBar value={progressPct} /></div>
+                  <div
+                    className={`mt-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs ${
+                      diff < 0
+                        ? "bg-amber-50 border-amber-200 text-amber-800"
+                        : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                    }`}
+                  >
+                    {diff < 0 ? (
+                      <>Faltam {formatCurrency(-diff, "BRL")} para o número mágico</>
+                    ) : (
+                      <>Você superou a meta em {formatCurrency(diff, "BRL")}.</>
                     )}
+                  </div>
+                </div>
+              </div>
+            </Section>
+
+            {/* Cards secundários */}
+            <Section>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Patrimônio ao aposentar */}
+                <div className="rounded-xl border p-4 min-h-[148px]">
+                  <div className="text-xs text-slate-500">Patrimônio ao aposentar</div>
+                  <div className="text-2xl font-semibold">{formatCurrency(wealthAtRetire, "BRL")}</div>
+                  <div className="text-xs text-slate-600">Horizonte: {Math.round(monthsToRetire / 12)} anos</div>
+                </div>
+
+                {/* Cobertura/Perpetuidade + Gasto sustentável */}
+                <div
+                  className={`rounded-xl border p-4 min-h-[148px] ${
+                    hasPerpetuity ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"
+                  }`}
+                >
+                  <div className="text-xs text-slate-600">{hasPerpetuity ? "Perpetuidade" : "Cobertura estimada"}</div>
+                  <div className="text-2xl font-semibold">
+                    {hasPerpetuity ? "Atingível" : `${formatNumber(runwayY, 1)} anos`}
+                  </div>
+                  <div className="text-xs text-slate-700">
+                    {hasPerpetuity ? (
+                      <>Com {formatNumber(retireRealReturn, 1)}% real a.a.</>
+                    ) : (
+                      <>até ~{formatNumber(endAge, 1)} anos de idade</>
+                    )}
+                    <div className="mt-2"><em>ou</em> gasto sustentável: <span className="font-medium text-[var(--brand-dark)]">{formatCurrency(sustainableMonthlySWR, "BRL")}/mês</span></div>
+                  </div>
+                </div>
+
+                {/* Plano de ação */}
+                <div className="rounded-xl border p-4 min-h-[148px]">
+                  <div className="text-xs text-slate-500">Plano de ação</div>
+                  {gap > 0 ? (
+                    <>
+                      <div className="text-sm text-slate-700">Poupança extra necessária</div>
+                      <div className="text-2xl font-semibold">{formatCurrency(extraMonthlyNeeded, "BRL")}/mês</div>
+                      {isFinite(monthsToGoalAtCurrentPlan) && monthsToGoalAtCurrentPlan !== 0 && (
+                        <div className="text-xs text-slate-600 mt-1">
+                          Mantendo a poupança atual{lumpSums.length ? " e os aportes" : ""}, meta em ~
+                          {monthsToGoalAtCurrentPlan > 24
+                            ? `${formatNumber(monthsToGoalAtCurrentPlan / 12, 1)} anos`
+                            : `${formatNumber(monthsToGoalAtCurrentPlan, 0)} meses`}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-sm text-emerald-700">Meta atingida com as premissas atuais.</div>
+                  )}
                 </div>
               </div>
             </Section>
 
             {/* Gráfico */}
             <Section>
-              <p className="font-semibold mb-2">
-                Acumulação até a aposentadoria (valores reais, já ajustados à inflação)
-              </p>
+              <p className="font-semibold mb-2">Acumulação até a aposentadoria (valores reais, já ajustados à inflação)</p>
               <div className="h-[320px]">
                 <ResponsiveContainer width="100%" height={320}>
                   <AreaChart data={chartData} margin={{ top: 44, right: 20, bottom: 0, left: 0 }}>
@@ -820,22 +739,12 @@ export default function App() {
                       }}
                     />
                     <YAxis
-                      tickFormatter={(v) =>
-                        new Intl.NumberFormat("pt-BR", {
-                          notation: "compact",
-                          maximumFractionDigits: 1,
-                        }).format(v)
-                      }
+                      tickFormatter={(v) => new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 }).format(v)}
                     />
 
                     {/* faixa pós-aposentadoria */}
                     {monthsToRetire > 0 && (
-                      <ReferenceArea
-                        x1={monthsToRetire}
-                        x2={monthsTo100}
-                        fill="var(--brand-dark)"
-                        fillOpacity={0.05}
-                      />
+                      <ReferenceArea x1={monthsToRetire} x2={monthsTo100} fill="var(--brand-dark)" fillOpacity={0.05} />
                     )}
 
                     {/* linha pontilhada da aposentadoria */}
@@ -844,33 +753,13 @@ export default function App() {
                         x={monthsToRetire}
                         stroke="var(--brand-dark)"
                         strokeDasharray="4 4"
-                        label={{
-                          value: `Aposentadoria (${retireAge} anos)`,
-                          position: "top",
-                          fill: "var(--brand-dark)",
-                          fontSize: 12,
-                          offset: 14, // evita corte
-                        }}
+                        label={{ value: `Aposentadoria (${retireAge} anos)`, position: "top", fill: "var(--brand-dark)", fontSize: 12, offset: 14 }}
                       />
                     )}
 
                     <Legend />
-                    <Area
-                      type="monotone"
-                      dataKey="Patrimônio projetado (real)"
-                      stroke="var(--brand-dark)"
-                      fill="var(--brand-dark)"
-                      strokeWidth={2}
-                      fillOpacity={0.15}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="Meta de aposentadoria (SWR)"
-                      stroke="var(--brand-lime)"
-                      fill="var(--brand-lime)"
-                      strokeWidth={2}
-                      fillOpacity={0.12}
-                    />
+                    <Area type="monotone" dataKey="Patrimônio projetado (real)" stroke="var(--brand-dark)" fill="var(--brand-dark)" strokeWidth={2} fillOpacity={0.15} />
+                    <Area type="monotone" dataKey="Meta de aposentadoria (SWR)" stroke="var(--brand-lime)" fill="var(--brand-lime)" strokeWidth={2} fillOpacity={0.12} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -881,28 +770,19 @@ export default function App() {
               <p className="font-semibold mb-2">Como usar (rápido)</p>
               <ol className="list-decimal pl-5 space-y-1 text-sm text-slate-700">
                 <li>
-                  Preencha: idade atual, idade de aposentadoria, patrimônio atual, poupança mensal (aceita negativo) e
-                  gasto mensal na aposentadoria — <strong>todos em valores reais</strong> (ou seja,{" "}
-                  <strong>já ajustados pela inflação</strong>).
+                  Preencha: idade atual, idade de aposentadoria, patrimônio atual, poupança mensal (aceita negativo) e gasto mensal na aposentadoria — <strong>todos em valores reais</strong> (ou seja, <strong>já ajustados pela inflação</strong>).
                 </li>
                 <li>
-                  Ajuste a <strong>SWR</strong> com o slider; o valor atual aparece logo abaixo. Como referência:{" "}
-                  <strong>3,5% é um nível histórico/realista</strong>, enquanto <strong>&gt; 5%</strong> tende a ser
-                  mais agressivo.
+                  Ajuste a <strong>SWR</strong> com o slider (referência: <strong>3,5% histórico/realista</strong>; <strong>&gt; 5%</strong> é mais agressivo).
                 </li>
                 <li>
-                  Adicione <strong>contribuições pontuais</strong> (vendas/bônus) informando o valor e o mês em que
-                  entram.
+                  Adicione <strong>contribuições pontuais</strong> (vendas/bônus) informando o valor e o mês em que entram.
                 </li>
                 <li>
-                  Opcional: em <em>Mostrar avançado</em>, ajuste o <strong>retorno real na aposentadoria</strong> para
-                  ver por quantos anos o patrimônio cobre o gasto e{" "}
-                  <strong>até que idade</strong> você tem cobertura caso ainda não tenha atingido a perpetuidade.
+                  Opcional: em <em>Mostrar avançado</em>, ajuste o <strong>retorno real na aposentadoria</strong> para ver por quantos anos o patrimônio cobre o gasto e <strong>até que idade</strong> você tem cobertura.
                 </li>
                 <li>
-                  Veja o <strong>número mágico</strong> (meta por SWR), o <strong>patrimônio ao aposentar</strong>, o{" "}
-                  <strong>gasto sustentável</strong> e, se faltar, a <strong>poupança extra necessária</strong> e o
-                  tempo estimado para atingir a meta.
+                  Veja o <strong>número mágico</strong> (meta por SWR), o <strong>patrimônio ao aposentar</strong>, o <strong>gasto sustentável</strong> e, se faltar, a <strong>poupança extra necessária</strong> e o tempo estimado para atingir a meta.
                 </li>
               </ol>
               <p className="text-xs text-slate-500 mt-2">MVP educativo; não é aconselhamento financeiro.</p>
