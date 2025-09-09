@@ -101,6 +101,28 @@ const Switch: React.FC<{ checked: boolean; onChange: (b: boolean) => void }> = (
   </label>
 );
 
+/* ======= Progress Bar ======= */
+const ProgressBar: React.FC<{ value: number }> = ({ value }) => {
+  const pct = Math.max(0, Math.min(100, value));
+  return (
+    <div>
+      <div
+        className="h-3 w-full rounded-full bg-slate-200/70 overflow-hidden ring-1 ring-[var(--brand-gray)]"
+        role="progressbar"
+        aria-label="Percentual do número mágico"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={pct}
+      >
+        <div className="h-full bg-[var(--brand-dark)]" style={{ width: `${pct}%` }} />
+      </div>
+      <div className="mt-1 text-xs text-slate-600 text-right">
+        {new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(pct)}%
+      </div>
+    </div>
+  );
+};
+
 /* ===========================
    INPUTS BR COM MILHAR (live)
 =========================== */
@@ -320,20 +342,18 @@ export default function App() {
     ["--brand-gray" as any]: "#a6a797",
   };
 
-  const [showAdvanced, setShowAdvanced] = useState(true);
+  const [showAdvanced, setShowAdvanced] = useState(false); // ← OFF por padrão
   const [age, setAge] = useState(24); // default 24
   const [retireAge, setRetireAge] = useState(35);
-  const [currentWealth, setCurrentWealth] = useState(2_000_000);
-  const [monthlySaving, setMonthlySaving] = useState(80_000); // aceita negativo
+  const [currentWealth, setCurrentWealth] = useState(3_000_000);
+  const [monthlySaving, setMonthlySaving] = useState(0); // aceita negativo
   const [monthlySpend, setMonthlySpend] = useState(60_000);
-  const [swrPct, setSwrPct] = useState(3.5);
+  const [swrPct, setSwrPct] = useState(3.5); // default 3,5%
   const [accumRealReturn, setAccumRealReturn] = useState(5);
   const [retireRealReturn, setRetireRealReturn] = useState(3);
 
   // contribuições pontuais
-  const [lumpSums, setLumpSums] = useState<Lump[]>([
-    { id: 1, month: 6, amount: 500_000 },
-  ]);
+  const [lumpSums, setLumpSums] = useState<Lump[]>([]);
 
   const monthsToRetire = Math.max(0, (retireAge - age) * 12);
   const monthlyReal = monthlyRateFromRealAnnual(accumRealReturn);
@@ -456,7 +476,9 @@ export default function App() {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Inputs */}
           <Section>
-            <p className="font-semibold mb-3">Parâmetros</p>
+            <p className="font-semibold mb-4 text-xl">Parâmetros</p>
+
+            {/* Campos principais */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Idade atual</Label>
@@ -500,67 +522,59 @@ export default function App() {
               </div>
             </div>
 
-            {/* APORTES em cima; SWR/RETORNOS embaixo */}
-            <div className="rounded-2xl border p-3 mt-3 space-y-4">
-              {/* Contribuições pontuais */}
-              <div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-2">
-                  <Label>Contribuições pontuais (valor e mês)</Label>
-                  <Button variant="outline" onClick={addLump}>
-                    ＋
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {lumpSums.map((ls) => (
-                    <div
-                      key={ls.id}
-                      className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:items-end"
-                    >
-                      <div className="col-span-12 sm:col-span-6">
-                        <Label>Valor (BRL)</Label>
-                        <NumericInputBR
-                          value={ls.amount}
-                          onChange={(n) => updateLump(ls.id, "amount", n)}
-                        />
-                      </div>
-                      <div className="col-span-12 sm:col-span-4">
-                        <Label>Mês em que entra</Label>
-                        <BaseInput
-                          type="number"
-                          min={1}
-                          max={monthsToRetire}
-                          value={ls.month}
-                          onChange={(e) =>
-                            updateLump(
-                              ls.id,
-                              "month",
-                              Number(e.target.value) || 1
-                            )
-                          }
-                        />
-                        <p className="text-xs text-slate-500 mt-1 sm:hidden">
-                          1 = próximo mês … até {monthsToRetire}
-                        </p>
-                      </div>
-                      <div className="col-span-12 sm:col-span-2 flex justify-start sm:justify-end mt-1 sm:mt-0">
-                        <Button
-                          variant="outline"
-                          onClick={() => removeLump(ls.id)}
-                        >
-                          －
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {lumpSums.length === 0 && (
-                    <p className="text-xs text-slate-500">
-                      Nenhum aporte único adicionado.
-                    </p>
-                  )}
-                </div>
+            {/* ===== Seção: Contribuições pontuais ===== */}
+            <div className="rounded-2xl border p-3 mt-4 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <Label>Contribuições pontuais (valor e mês)</Label>
+                <Button variant="outline" onClick={addLump}>
+                  ＋
+                </Button>
               </div>
+              <div className="space-y-2">
+                {lumpSums.map((ls) => (
+                  <div
+                    key={ls.id}
+                    className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:items-end"
+                  >
+                    <div className="col-span-12 sm:col-span-6">
+                      <Label>Valor (BRL)</Label>
+                      <NumericInputBR
+                        value={ls.amount}
+                        onChange={(n) => updateLump(ls.id, "amount", n)}
+                      />
+                    </div>
+                    <div className="col-span-12 sm:col-span-4">
+                      <Label>Mês em que entra</Label>
+                      <BaseInput
+                        type="number"
+                        min={1}
+                        max={monthsToRetire}
+                        value={ls.month}
+                        onChange={(e) =>
+                          updateLump(ls.id, "month", Number(e.target.value) || 1)
+                        }
+                      />
+                      <p className="text-xs text-slate-500 mt-1 sm:hidden">
+                        1 = próximo mês … até {monthsToRetire}
+                      </p>
+                    </div>
+                    <div className="col-span-12 sm:col-span-2 flex justify-start sm:justify-end mt-1 sm:mt-0">
+                      <Button variant="outline" onClick={() => removeLump(ls.id)}>
+                        －
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {lumpSums.length === 0 && (
+                  <p className="text-xs text-slate-500">
+                    Nenhum aporte único adicionado.
+                  </p>
+                )}
+              </div>
+            </div>
 
-              {/* SWR e retornos */}
+            {/* ===== Seção: SWR & Retornos ===== */}
+            <div className="rounded-2xl border p-3 mt-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
                 {/* SWR (esquerda) */}
                 <div>
@@ -665,27 +679,24 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Coluna 3 */}
+                {/* Coluna 3: agora com a barra de progresso */}
                 <div>
                   <p className="text-xs text-slate-500">Status</p>
-                  <p
-                    className={`text-sm ${
-                      gap > 0 ? "text-slate-700" : "text-emerald-700"
-                    }`}
-                  >
-                    {gap > 0
-                      ? `Faltam ${formatCurrency(gap, "BRL")} para a meta`
-                      : "Meta de perpetuidade atingida"}
-                  </p>
-                  <p className="text-slate-500 text-xs mt-1">
-                    Percentual do número mágico: {formatNumber(progressPct, 0)}%
-                  </p>
+
+                  <div className="mt-2">
+                    <p className="text-xs text-slate-500 mb-1">
+                      Percentual do número mágico
+                    </p>
+                    <ProgressBar value={progressPct} />
+                  </div>
+
                   {gap > 0 && monthsToRetire > 0 && extraMonthlyNeeded >= 100 && (
-                    <p className="text-slate-500 text-xs">
+                    <p className="text-slate-500 text-xs mt-2">
                       Poupança extra necessária:{" "}
                       {formatCurrency(extraMonthlyNeeded, "BRL")}/mês
                     </p>
                   )}
+
                   {gap > 0 &&
                     isFinite(monthsToGoalAtCurrentPlan) &&
                     monthsToGoalAtCurrentPlan !== 0 && (
@@ -703,6 +714,12 @@ export default function App() {
                             )} meses`}
                       </p>
                     )}
+
+                  {gap <= 0 && (
+                    <p className="text-emerald-700 text-xs mt-2">
+                      Meta de perpetuidade atingida
+                    </p>
+                  )}
                 </div>
               </div>
             </Section>
