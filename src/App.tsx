@@ -470,6 +470,13 @@ export default function App() {
   }
   const runwayY = yearsOfRunway({ startingWealth: wealthAtRetire, annualSpend: monthlySpend * 12, realReturnAnnual: retireRealReturn });
   const endAge = isFinite(runwayY) ? retireAge + runwayY : Infinity;
+  const invalidRunway = !Number.isFinite(runwayY) || runwayY < 0;
+  const runwayYearsLabel = invalidRunway ? "—" : formatNumber(runwayY, 1);
+  const endAgeLabel = invalidRunway ? "—" : formatNumber(endAge, 1);
+  const endAgeSuffix = !invalidRunway && endAge > 120
+    ? ` (parabéns para você, caso chegue a essa idade)`
+    : "";
+
 
   const monthsToGoalAtCurrentPlan = useMemo(() => {
     if (targetWealth <= 0) return 0;
@@ -695,13 +702,13 @@ export default function App() {
                                     <div className="text-xs text-slate-600">{hasPerpetuity ? "Perpetuidade" : "Cobertura estimada"}</div>
 <div className="mt-1"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--brand-lime)]/10 text-[var(--brand-dark)] border border-[var(--brand-lime)]/40">com gasto de {formatCurrency(monthlySpend, "BRL")}/mês</span></div>
                   <div className="text-2xl font-semibold">
-                    {hasPerpetuity ? "Atingível" : `${formatNumber(runwayY, 1)} anos`}
+                    {hasPerpetuity ? "Atingível" : `${runwayYearsLabel} anos`}
                   </div>
                   <div className="text-xs text-slate-700">
                     {hasPerpetuity ? (
                       <>Com {formatNumber(retireRealReturn, 1)}% real a.a.</>
                     ) : (
-                      <>até ~{formatNumber(endAge, 1)} anos de idade</>
+                      <>até ~{endAgeLabel} anos de idade{endAge > 120 ? " (parabéns para você, caso chegue a essa idade)" : ""}</>
                     )}
                   </div>
                 </div>
