@@ -761,7 +761,8 @@ export default function App() {
             <Section>
               <p className="font-semibold mb-2">Acumulação até a aposentadoria (valores reais, já ajustados à inflação)</p>
               <div className="h-[320px]">
-                <ResponsiveContainer width="100%" height={320}>
+                {chartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={320}>
                   <AreaChart data={chartData} margin={{ top: 44, right: 20, bottom: 0, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis
