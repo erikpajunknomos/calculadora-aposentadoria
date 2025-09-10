@@ -379,7 +379,7 @@ function projectFullTo100({
 /* ===========================
    APP
 =========================== */
-export default function App() {
+function AppInner() {
   const themeVars = {
     ["--brand-dark" as any]: "#021e19",
     ["--brand-lime" as any]: "#c8e05b",
@@ -830,5 +830,15 @@ export default function App() {
         </div>
       </div>
     </div>
+  );
+}
+
+
+/* ====== Debug wrapper ====== */
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppInner />
+    </ErrorBoundary>
   );
 }
