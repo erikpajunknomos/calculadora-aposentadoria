@@ -468,7 +468,7 @@ export default function App() {
     if (ratio <= 0) return Infinity;
     return -Math.log(ratio) / Math.log(1 + r);
   }
-  const runwayY = yearsOfRunway({ startingWealth: wealthAtRetire, annualSpend: annualRetireSpend, realReturnAnnual: retireRealReturn });
+  const runwayY = yearsOfRunway({ startingWealth: wealthAtRetire, annualSpend: monthlySpend * 12, realReturnAnnual: retireRealReturn });
   const endAge = isFinite(runwayY) ? retireAge + runwayY : Infinity;
 
   const monthsToGoalAtCurrentPlan = useMemo(() => {
