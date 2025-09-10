@@ -436,7 +436,6 @@ export default function App() {
     [age, currentWealth, monthsToRetire, monthlySaving, monthlyAccum, monthlyRetire, monthlySpend, lumpSums]
   );
 
-  const monthlyRetire = monthlyRateFromRealAnnual(retireRealReturn);
   const targetWealth = monthlySpend / Math.max(monthlyRetire, 1e-9);
   const gap = targetWealth - wealthAtRetire;
   const progressPct = Math.max(0, Math.min(100, (100 * wealthAtRetire) / Math.max(targetWealth, 1)));
