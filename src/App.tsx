@@ -25,8 +25,8 @@ const Section: React.FC<React.PropsWithChildren<{ className?: string }>> = ({
   </div>
 );
 
-const Label: React.FC<React.PropsWithChildren> = ({ children }) => (
-  <label className="text-sm font-medium text-slate-800">{children}</label>
+const Label: React.FC<React.PropsWithChildren<{ className?: string }>> = ({ children, className }) => (
+  <label className={`text-sm font-medium text-slate-800 ${className || ""}`}>{children}</label>
 );
 
 const BaseInput = React.forwardRef<
@@ -253,7 +253,7 @@ function NumericInputBRSigned({
     const next = value || value === 0 ? (value < 0 ? "-" : "") + formatBRInt(Math.abs(value)) : "";
     if (next !== text) setText(next);
   }, [value]);
-  function handleChange(e: React.Change<HTMLInputElement>) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.value.trim();
     const isNeg = raw.startsWith("-");
     const only = raw.replace(/\D+/g, "");
@@ -385,14 +385,16 @@ export default function App() {
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [age, setAge] = useState(24);
-  const [retireAge, setRetireAge] = useState(35);
+  const [retireAge, setRetireAge] = useState(34);
   const [currentWealth, setCurrentWealth] = useState(3_000_000);
-  const [monthlySaving, setMonthlySaving] = useState(0);
-  const [monthlySpend, setMonthlySpend] = useState(60_000);
+  const [monthlySaving, setMonthlySaving] = useState(120_000);
+  const [monthlySpend, setMonthlySpend] = useState(100_000);
   const [swrPct, setSwrPct] = useState(3.5);
   const [accumRealReturn, setAccumRealReturn] = useState(5);
   const [retireRealReturn, setRetireRealReturn] = useState(3.5);
-  const [lumpSums, setLumpSums] = useState<Lump[]>([]);
+  const [lumpSums, setLumpSums] = useState<Lump[]>([{ id: 1, month: 12, amount: 5_000_000 }]);
+
+  useEffect(() => { if (!showAdvanced) setRetireRealReturn(swrPct); }, [swrPct, showAdvanced]);
 
   const monthsToRetire = Math.max(0, (retireAge - age) * 12);
   const monthsTo100 = Math.max(0, (100 - age) * 12);
@@ -573,12 +575,12 @@ export default function App() {
               <div className="space-y-2">
                 {lumpSums.map((ls) => (
                   <div key={ls.id} className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:items-end">
-                    <div className="col-span-12 sm:col-span-6">
+                    <div className="col-span-12 sm:col-span-7">
                       <Label>Valor (BRL)</Label>
                       <NumericInputBR value={ls.amount} onChange={(n) => updateLump(ls.id, "amount", n)} />
                     </div>
-                    <div className="col-span-12 sm:col-span-4">
-                      <Label>Mês em que entra</Label>
+                    <div className="col-span-12 sm:col-span-3">
+                      <Label className="whitespace-nowrap">Mês em que entra</Label>
                       <BaseInput type="number" min={1} max={monthsToRetire} value={ls.month} onChange={(e) => updateLump(ls.id, "month", Number(e.target.value) || 1)} />
                       <p className="text-xs text-slate-500 mt-1 sm:hidden">1 = próximo mês … até {monthsToRetire}</p>
                     </div>
@@ -671,48 +673,48 @@ export default function App() {
 
             {/* Cards secundários */}
             <Section>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch auto-rows-[minmax(0,1fr)] auto-rows-fr">
                 {/* Patrimônio ao aposentar */}
-                <div className="rounded-xl border p-4 min-h-[148px]">
-                  <div className="text-xs text-slate-500">Patrimônio ao aposentar</div>
-                  <div className="text-2xl font-semibold">{formatCurrency(wealthAtRetire, "BRL")}</div>
-                  <div className="text-xs text-slate-600">Horizonte: {Math.round(monthsToRetire / 12)} anos</div>
+                <div className="rounded-xl border p-4 min-h-[180px] md:min-h-[200px] min-w-0 h-full flex flex-col overflow-hidden min-w-0">
+                  <div className="text-sm text-slate-500">Patrimônio ao aposentar</div>
+                  <div className="font-semibold leading-tight text-[clamp(1.35rem,2.8vw,2.1rem)] tabular-nums break-words">{formatCurrency(wealthAtRetire, "BRL")}</div>
+                  <div className="text-sm text-slate-600">Horizonte: {Math.round(monthsToRetire / 12)} anos</div>
                 </div>
 
                 {/* Cobertura/Perpetuidade + Gasto sustentável */}
                 <div
-                  className={`rounded-xl border p-4 min-h-[148px] ${
+                  className={`rounded-xl border p-4 min-h-[180px] md:min-h-[200px] min-w-0 h-full flex flex-col overflow-hidden min-w-0 ${
                     hasPerpetuity ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"
                   }`}
                 >
                   <div className="text-xs text-slate-600">{hasPerpetuity ? "Perpetuidade" : "Cobertura estimada"}</div>
+                  {!hasPerpetuity && (
+                    <div className="mt-1 inline-flex items-center rounded-full bg-white/70 border px-2 py-0.5 text-[11px] text-slate-700 w-max">
+                      com gasto de {formatCurrency(monthlySpend, "BRL")}/mês
+                    </div>
+                  )}
                   <div className="text-2xl font-semibold">
                     {hasPerpetuity ? "Atingível" : `${formatNumber(runwayY, 1)} anos`}
                   </div>
                   <div className="text-xs text-slate-700">
                     {hasPerpetuity ? (
-                      <>Com {formatNumber(retireRealReturn, 1)}% real a.a.</>
+                      <>Com {formatNumber(retireRealReturn, 1)}% real a.a., <span className="whitespace-nowrap">gasto de {formatCurrency(monthlySpend, "BRL")}/mês</span> é sustentável.</>
                     ) : (
-                      <>até ~{formatNumber(endAge, 1)} anos de idade</>
+                      <>Até ~{formatNumber(endAge, 1)} anos de idade.</>
                     )}
                     <div className="mt-2"><em>ou</em> gasto sustentável: <span className="font-medium text-[var(--brand-dark)]">{formatCurrency(sustainableMonthlySWR, "BRL")}/mês</span></div>
                   </div>
                 </div>
 
                 {/* Plano de ação */}
-                <div className="rounded-xl border p-4 min-h-[148px]">
+                <div className="rounded-xl border p-4 min-h-[180px] md:min-h-[200px] min-w-0 h-full flex flex-col overflow-hidden min-w-0">
                   <div className="text-xs text-slate-500">Plano de ação</div>
                   {gap > 0 ? (
                     <>
                       <div className="text-sm text-slate-700">Poupança extra necessária</div>
                       <div className="text-2xl font-semibold">{formatCurrency(extraMonthlyNeeded, "BRL")}/mês</div>
                       {isFinite(monthsToGoalAtCurrentPlan) && monthsToGoalAtCurrentPlan !== 0 && (
-                        <div className="text-xs text-slate-600 mt-1">
-                          Mantendo a poupança atual{lumpSums.length ? " e os aportes" : ""}, meta em ~
-                          {monthsToGoalAtCurrentPlan > 24
-                            ? `${formatNumber(monthsToGoalAtCurrentPlan / 12, 1)} anos`
-                            : `${formatNumber(monthsToGoalAtCurrentPlan, 0)} meses`}
-                        </div>
+                        <div className="text-xs text-slate-600 mt-1">Mantendo a poupança atual{lumpSums.length ? " e os aportes" : ""}, meta em ~{monthsToGoalAtCurrentPlan > 24 ? `${formatNumber(monthsToGoalAtCurrentPlan / 12, 1)} anos` : `${formatNumber(monthsToGoalAtCurrentPlan, 0)} meses`} (aos ~{formatNumber(age + monthsToGoalAtCurrentPlan / 12, 1)} anos de idade)</div>
                       )}
                     </>
                   ) : (
