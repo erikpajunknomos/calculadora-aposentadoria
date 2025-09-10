@@ -436,14 +436,14 @@ export default function App() {
     [age, currentWealth, monthsToRetire, monthlySaving, monthlyAccum, monthlyRetire, monthlySpend, lumpSums]
   );
 
-  const annualRetireSpend = monthlySpend * 12;
-  const targetWealth = (annualRetireSpend * 100) / swrPct;
+  const monthlyRetire = monthlyRateFromRealAnnual(retireRealReturn);
+  const targetWealth = monthlySpend / Math.max(monthlyRetire, 1e-9);
   const gap = targetWealth - wealthAtRetire;
   const progressPct = Math.max(0, Math.min(100, (100 * wealthAtRetire) / Math.max(targetWealth, 1)));
   const diff = wealthAtRetire - targetWealth; // positivo = sobrou; negativo = falta
 
   /* sustentabilidade na aposentadoria */
-  const sustainableMonthlySWR = (wealthAtRetire * retireRealReturn) / 100 / 12;
+  const sustainableMonthlySWR = wealthAtRetire * monthlyRetire;
   const hasPerpetuity = sustainableMonthlySWR >= monthlySpend;
 
   /* extra por mês para chegar no número mágico no tempo definido */
@@ -715,13 +715,14 @@ export default function App() {
                       <div className="text-sm text-slate-700">Poupança extra necessária</div>
                       <div className="text-2xl font-semibold">{formatCurrency(extraMonthlyNeeded, "BRL")}/mês</div>
                       {isFinite(monthsToGoalAtCurrentPlan) && monthsToGoalAtCurrentPlan !== 0 && (
-                        <div className="text-xs text-slate-600 mt-1">
-                          Mantendo a poupança atual{lumpSums.length ? " e os aportes" : ""}, meta em ~
-                          {monthsToGoalAtCurrentPlan > 24
-                            ? `${formatNumber(monthsToGoalAtCurrentPlan / 12, 1)} `
-                            : `${formatNumber(monthsToGoalAtCurrentPlan, 0)} meses`} <> </>
-                        </div>
-                      )}
+  <div className="text-xs text-slate-600 mt-1">
+    Mantendo a poupança atual{lumpSums.length ? " e os aportes" : ""}, meta em ~
+    {monthsToGoalAtCurrentPlan > 24
+      ? `${formatNumber(monthsToGoalAtCurrentPlan / 12, 1)} anos`
+      : `${formatNumber(monthsToGoalAtCurrentPlan, 0)} meses`}{" "}
+    (idade ~ {formatNumber(age + monthsToGoalAtCurrentPlan / 12, 1)} anos)
+  </div>
+)}
                     </>
                   ) : (
                     <div className="text-sm text-emerald-700">Meta atingida com as premissas atuais.</div>
