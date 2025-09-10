@@ -474,6 +474,19 @@ export default function App() {
   const runwayYearsLabel = invalidRunway ? "—" : formatNumber(runwayY, 1);
   const endAgeLabel = invalidRunway ? "—" : formatNumber(endAge, 1);
   const nearPerpetuity = invalidRunway || (Number.isFinite(runwayY) && runwayY > 120);
+  const endAgeMessage =
+    (Number.isFinite(endAge) && endAge > 123)
+      ? " (você terá entrado para o guiness)"
+      : ((Number.isFinite(endAge) && endAge > 100)
+          ? " (parabéns para você, caso chegue a essa idade)"
+          : "");
+
+  const endAgeLine = nearPerpetuity ? null : (
+    <>
+      até ~{endAgeLabel} anos de idade{endAgeMessage}
+    </>
+  );
+
   const endAgeSuffix = !invalidRunway && endAge > 120
     ? ` (parabéns para você, caso chegue a essa idade)`
     : "";
@@ -709,7 +722,7 @@ export default function App() {
                     {hasPerpetuity ? (
                       <>Com {formatNumber(retireRealReturn, 1)}% real a.a.</>
                     ) : (
-                      {!nearPerpetuity && (<>até ~{endAgeLabel} anos de idade{Number.isFinite(endAge) && endAge > 123 ? " (você terá entrado para o guiness)" : (Number.isFinite(endAge) && endAge > 100 ? " (parabéns para você, caso chegue a essa idade)" : "")}</>)}
+                      {endAgeLine}
                     )}
                   </div>
                 </div>
