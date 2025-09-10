@@ -709,7 +709,7 @@ export default function App() {
                     {hasPerpetuity ? (
                       <>Com {formatNumber(retireRealReturn, 1)}% real a.a.</>
                     ) : (
-                      {nearPerpetuity ? null : <>até ~{endAgeLabel} anos de idade{Number.isFinite(endAge) && endAge > 123 ? " (você terá entrado para o guiness)" : (Number.isFinite(endAge) && endAge > 100 ? " (parabéns para você, caso chegue a essa idade)" : "")}</>}
+                      {!nearPerpetuity && (<>até ~{endAgeLabel} anos de idade{Number.isFinite(endAge) && endAge > 123 ? " (você terá entrado para o guiness)" : (Number.isFinite(endAge) && endAge > 100 ? " (parabéns para você, caso chegue a essa idade)" : "")}</>)}
                     )}
                   </div>
                 </div>
