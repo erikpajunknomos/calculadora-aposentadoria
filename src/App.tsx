@@ -693,7 +693,8 @@ export default function App() {
                   }`}
                 >
                   
-                  <div className="mt-1"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--brand-lime)]/10 text-[var(--brand-dark)] border border-[var(--brand-lime)]/40">com gasto de {formatCurrency(monthlySpend, "BRL")}/mês</span></div>
+                                    <div className="text-xs text-slate-600">{hasPerpetuity ? "Perpetuidade" : "Cobertura estimada"}</div>
+<div className="mt-1"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--brand-lime)]/10 text-[var(--brand-dark)] border border-[var(--brand-lime)]/40">com gasto de {formatCurrency(monthlySpend, "BRL")}/mês</span></div>
                   <div className="text-2xl font-semibold">
                     {hasPerpetuity ? "Atingível" : `${formatNumber(runwayY, 1)} anos`}
                   </div>
@@ -717,8 +718,8 @@ export default function App() {
                         <div className="text-xs text-slate-600 mt-1">
                           Mantendo a poupança atual{lumpSums.length ? " e os aportes" : ""}, meta em ~
                           {monthsToGoalAtCurrentPlan > 24
-                            ? `${formatNumber(monthsToGoalAtCurrentPlan / 12, 1)} (idade ~ {formatNumber(age + monthsToGoalAtCurrentPlan/12, 1)} anos)`
-                            : `${formatNumber(monthsToGoalAtCurrentPlan, 0)} meses`}
+                            ? `${formatNumber(monthsToGoalAtCurrentPlan / 12, 1)} `
+                            : `${formatNumber(monthsToGoalAtCurrentPlan, 0)} meses`} <> </>
                         </div>
                       )}
                     </>
