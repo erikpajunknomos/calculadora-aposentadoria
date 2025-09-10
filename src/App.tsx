@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -11,7 +11,9 @@ import {
   YAxis,
 } from "recharts";
 
-/* ========= Helpers ========= */
+/* =========================
+   Utils / helpers
+   ========================= */
 
 const BRL0 = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -19,19 +21,16 @@ const BRL0 = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 0,
   minimumFractionDigits: 0,
 });
-
 const BRL2 = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
   maximumFractionDigits: 2,
   minimumFractionDigits: 2,
 });
-
 function formatCurrency(n: number, cents = false) {
   if (!isFinite(n)) return cents ? "R$ 0,00" : "R$ 0";
   return (cents ? BRL2 : BRL0).format(Math.round(n));
 }
-
 function formatNumber(n: number, d = 1) {
   if (!isFinite(n)) return "0";
   return n.toLocaleString("pt-BR", {
@@ -39,24 +38,23 @@ function formatNumber(n: number, d = 1) {
     maximumFractionDigits: d,
   });
 }
-
 function parseMoneyInput(v: string) {
   const digits = v.replace(/\D+/g, "");
   if (!digits) return 0;
   return parseInt(digits, 10);
 }
-
 function clamp(n: number, a: number, b: number) {
   return Math.min(b, Math.max(a, n));
 }
-
 type Lump = { id: number; month: number; amount: number };
 
-/* ========= AutoFit (não deixa quebrar o valor grande) ========= */
+/* =========================
+   AutoFit – evita quebrar o número grande
+   ========================= */
 
 function AutoFit({
   children,
-  max = 42,
+  max = 34,
   min = 20,
   className = "",
 }: {
@@ -66,7 +64,7 @@ function AutoFit({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [fontSize, setFontSize] = useState(max);
+  const [fs, setFs] = useState(max);
 
   useEffect(() => {
     const el = ref.current;
@@ -82,14 +80,13 @@ function AutoFit({
         s -= 1;
         el.style.fontSize = `${s}px`;
       }
-      setFontSize(s);
+      setFs(s);
     };
 
     const ro = new ResizeObserver(fit);
     ro.observe(el);
     window.addEventListener("resize", fit);
     fit();
-
     return () => {
       ro.disconnect();
       window.removeEventListener("resize", fit);
@@ -100,14 +97,66 @@ function AutoFit({
     <div
       ref={ref}
       className={className}
-      style={{ fontSize, lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden" }}
+      style={{ fontSize: fs, lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden" }}
     >
       {children}
     </div>
   );
 }
 
-/* ========= App ========= */
+/* =========================
+   Inputs
+   ========================= */
+
+function SmallLabel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <label className={`text-sm font-medium text-slate-800 ${className}`}>{children}</label>;
+}
+function NumberInput({
+  value,
+  onChange,
+  min,
+  max,
+  step = 1,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+}) {
+  return (
+    <input
+      type="number"
+      className="mt-1 w-full rounded-xl border px-3 py-2 bg-white"
+      value={value}
+      min={min}
+      max={max}
+      step={step}
+      onChange={(e) => onChange(parseFloat(e.target.value || "0"))}
+    />
+  );
+}
+function MoneyInput({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const [txt, setTxt] = useState(formatCurrency(value));
+  useEffect(() => setTxt(formatCurrency(value)), [value]);
+  return (
+    <input
+      type="text"
+      className="mt-1 w-full rounded-xl border px-3 py-2 bg-white"
+      inputMode="numeric"
+      value={txt}
+      onChange={(e) => {
+        const raw = parseMoneyInput(e.target.value);
+        setTxt(formatCurrency(raw));
+        onChange(raw);
+      }}
+    />
+  );
+}
+
+/* =========================
+   App
+   ========================= */
 
 export default function App() {
   // Defaults
@@ -128,13 +177,21 @@ export default function App() {
     { id: 1, month: 12, amount: 5_000_000 },
   ]);
 
-  // Avançado OFF → retorno na aposentadoria acompanha o SWR
+  // Sincroniza retorno na aposentadoria com o SWR se avançado estiver off
   useEffect(() => {
     if (!showAdvanced) setRetireRealReturn(swrPct);
   }, [swrPct, showAdvanced]);
 
-  /* ========= Cálculos ========= */
+  /* ---------- Cores ---------- */
+  const brand = {
+    dark: "#082e1f",
+    mid: "#0b4731",
+    sand: "#efe7dd",
+    accent: "#f8f5e6",
+    warn: "#fdecc8",
+  };
 
+  /* ---------- Cálculos ---------- */
   const monthsToRetire = Math.max(0, (retireAge - age) * 12);
   const monthsTo100 = Math.max(0, (100 - age) * 12);
 
@@ -151,7 +208,9 @@ export default function App() {
 
     const lumpsMap = new Map<number, number>();
     for (const l of lumps) {
-      if (l.month > 0) lumpsMap.set(l.month, (lumpsMap.get(l.month) ?? 0) + Math.max(0, l.amount));
+      if (l.month > 0) {
+        lumpsMap.set(l.month, (lumpsMap.get(l.month) ?? 0) + Math.max(0, l.amount));
+      }
     }
 
     const arr: { x: number; age: number; wealth: number; goal: number }[] = [];
@@ -162,9 +221,11 @@ export default function App() {
         cur += monthlySaving;
         if (lumpsMap.has(m)) cur += lumpsMap.get(m)!;
       } else {
-        // pós-aposentadoria no gráfico: seguimos renderizando patrimônio com o mesmo retorno
-        cur *= 1 + rAcc;
+        // Pós-aposentadoria: retorno da aposentadoria e consumo mensal (valores reais)
+        cur = cur * (1 + rRet) - monthlySpend;
+        if (cur < 0) cur = 0;
       }
+
       arr.push({
         x: m,
         age: age + m / 12,
@@ -177,8 +238,7 @@ export default function App() {
       monthsToRetire >= 0 && monthsToRetire < arr.length ? arr[monthsToRetire].wealth : wealth;
 
     return { wealthAtRetire: wAtRetire, series: arr, retireIndex: monthsToRetire };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wealth, monthlySaving, lumps, monthsTo100, monthsToRetire, rAcc, age, magicNumber]);
+  }, [wealth, monthlySaving, lumps, monthsTo100, monthsToRetire, rAcc, rRet, age, magicNumber]);
 
   const sustainableMonthlySWR = useMemo(
     () => (wealthAtRetire * (swrPct / 100)) / 12,
@@ -191,7 +251,7 @@ export default function App() {
     const r = rRet;
 
     if (C <= 0) return { runwayYears: Infinity, hasPerpetuity: true, endAge: Infinity };
-    if (PV <= 0) return { runwayYears: 0, hasPerpetuity: false, endAge: age };
+    if ( PV <= 0) return { runwayYears: 0, hasPerpetuity: false, endAge: age };
 
     if (PV * r >= C) {
       return { runwayYears: Infinity, hasPerpetuity: true, endAge: Infinity };
@@ -243,18 +303,13 @@ export default function App() {
       m++;
       cur = cur * (1 + rAcc) + monthlySaving + (lumpsMap.get(m) ?? 0);
     }
-    return { monthsToGoal: cur >= magicNumber ? m : Infinity, ageAtGoal: cur >= magicNumber ? age + m / 12 : Infinity };
+    return {
+      monthsToGoal: cur >= magicNumber ? m : Infinity,
+      ageAtGoal: cur >= magicNumber ? age + m / 12 : Infinity,
+    };
   }, [wealth, monthlySaving, lumps, rAcc, magicNumber, age]);
 
-  /* ========= UI ========= */
-
-  const brand = {
-    dark: "#082e1f",
-    mid: "#0b4731",
-    sand: "#efe7dd",
-    accent: "#f8f5e6",
-    warn: "#fdecc8",
-  };
+  /* ---------- UI helpers ---------- */
 
   const tickAges = useMemo(() => {
     const start = Math.ceil(age);
@@ -273,30 +328,24 @@ export default function App() {
     return [formatCurrency(Number(value)), "Patrimônio projetado (real)"];
   };
 
-  const rangeBg = (pct: number) => ({
+  const filledRangeStyle = (pct: number) => ({
     background: `linear-gradient(90deg, ${brand.dark} ${pct}%, #e5e7eb ${pct}%)`,
     height: 8,
     borderRadius: 9999,
-    appearance: "none" as const,
   });
 
-  /* ========= Render ========= */
+  /* ---------- Render ---------- */
 
   return (
-    <div
-      className="min-h-screen bg-[var(--sand)] text-slate-900"
-      style={{
-        ["--sand" as any]: brand.sand,
-      }}
-    >
-      {/* Título + CTA */}
-      <div className="max-w-6xl mx-auto px-4 pt-5">
-        <div className="flex items-center gap-3 mb-3">
-          <span className="rounded-xl bg-[var(--brand-dark)] text-[#c9ff79] px-3 py-2 text-sm font-semibold" style={{ ["--brand-dark" as any]: brand.dark }}>
+    <div className="min-h-screen text-slate-900" style={{ background: brand.sand }}>
+      {/* Header + CTA */}
+      <div className="max-w-6xl mx-auto px-4 pt-4">
+        <div className="flex items-center gap-3 mb-2">
+          <span className="rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: brand.dark, color: "#c9ff79" }}>
             Nomos Sports
           </span>
           <a
-            className="ml-auto inline-flex rounded-xl px-4 py-2 text-white font-semibold"
+            className="ml-auto inline-flex rounded-xl px-4 py-2 text-white text-sm font-semibold"
             style={{ background: brand.mid }}
             href="https://api.whatsapp.com/send?phone=5521986243416&text=Ol%C3%A1%21+Estava+mexendo+na+calculadora+de+aposentadoria+da+Nomos+Sports.+Podemos+bater+um+papo%3F"
             target="_blank"
@@ -305,34 +354,33 @@ export default function App() {
             Falar com um especialista no WhatsApp
           </a>
         </div>
-        <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight" style={{ color: brand.dark }}>
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight" style={{ color: brand.dark }}>
           Calculadora de Aposentadoria para Atletas
         </h1>
       </div>
 
       {/* KPI topo */}
-      <div className="max-w-6xl mx-auto px-4 mt-4 grid grid-cols-1 gap-4">
-        <div className="rounded-2xl bg-white border shadow-sm p-5">
+      <div className="max-w-6xl mx-auto px-4 mt-4">
+        <div className="rounded-2xl bg-white border shadow-sm p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
             <div>
               <div className="text-slate-600 text-sm">Número mágico (SWR)</div>
-              <div className="text-[clamp(1.6rem,3.5vw,3rem)] font-extrabold leading-tight" style={{ color: brand.dark }}>
+              <div className="font-extrabold leading-tight" style={{ color: brand.dark, fontSize: "clamp(1.2rem,2.2vw,2rem)" }}>
                 {formatCurrency(magicNumber)}
               </div>
               <div className="text-slate-700 text-sm">
                 {formatNumber(swrPct, 1)}% a.a. com gasto de {formatCurrency(monthlySpend)}/mês
               </div>
             </div>
-
             <div className="min-w-0">
               <div className="text-slate-700 text-sm mb-1">Progresso rumo ao número mágico</div>
               <div className="flex items-center gap-3">
-                <div className="text-2xl font-bold">{`${formatNumber(progressPct, 0)}%`}</div>
+                <div className="text-xl font-bold">{`${formatNumber(progressPct, 0)}%`}</div>
                 <div className="flex-1 h-3 rounded-full bg-gray-200 overflow-hidden">
                   <div className="h-full rounded-full" style={{ width: `${progressPct}%`, background: brand.dark }} />
                 </div>
               </div>
-              <div className="mt-2 inline-flex items-center rounded-full border px-3 py-1 text-sm bg-[var(--warn)] text-slate-800" style={{ ["--warn" as any]: brand.warn }}>
+              <div className="mt-2 inline-flex items-center rounded-full border px-3 py-1 text-sm" style={{ background: brand.warn }}>
                 {remainingToGoal > 0
                   ? `Faltam ${formatCurrency(remainingToGoal)} para o número mágico`
                   : `Você superou a meta em ${formatCurrency(wealthAtRetire - magicNumber)}`}
@@ -345,26 +393,47 @@ export default function App() {
       {/* Corpo */}
       <div className="max-w-6xl mx-auto px-4 mt-4 grid grid-cols-1 md:grid-cols-[360px,1fr] gap-4">
         {/* Parâmetros */}
-        <div className="rounded-2xl bg-white border shadow-sm p-5">
-          <h2 className="text-2xl font-bold mb-4">Parâmetros</h2>
+        <div className="rounded-2xl bg-white border shadow-sm p-4">
+          <h2 className="text-2xl font-bold mb-3">Parâmetros</h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Idade atual" value={age} onChange={(v) => setAge(clamp(v, 15, 90))} />
-            <Field label="Idade de aposentadoria" value={retireAge} onChange={(v) => setRetireAge(clamp(v, age + 1, 80))} />
-            <MoneyField label="Patrimônio atual (BRL)" value={wealth} onChange={setWealth} />
-            <MoneyField label="Poupança mensal (BRL)" value={monthlySaving} onChange={setMonthlySaving} />
-            <MoneyField label="Gasto mensal na aposentadoria (BRL)" value={monthlySpend} onChange={setMonthlySpend} />
+            <div>
+              <SmallLabel>Idade atual</SmallLabel>
+              <NumberInput value={age} onChange={(v) => setAge(clamp(v, 15, 90))} />
+            </div>
+            <div>
+              <SmallLabel>Idade de aposentadoria</SmallLabel>
+              <NumberInput value={retireAge} onChange={(v) => setRetireAge(clamp(v, age + 1, 80))} />
+            </div>
+            <div>
+              <SmallLabel>Patrimônio atual (BRL)</SmallLabel>
+              <MoneyInput value={wealth} onChange={setWealth} />
+            </div>
+            <div>
+              <SmallLabel>Poupança mensal (BRL)</SmallLabel>
+              <MoneyInput value={monthlySaving} onChange={setMonthlySaving} />
+            </div>
+            <div className="sm:col-span-2">
+              <SmallLabel>Gasto mensal na aposentadoria (BRL)</SmallLabel>
+              <MoneyInput value={monthlySpend} onChange={setMonthlySpend} />
+            </div>
           </div>
 
           {/* Aportes pontuais */}
-          <div className="mt-5">
+          <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
               <div className="text-lg font-semibold">Contribuições pontuais (valor e mês)</div>
               <div className="flex gap-2">
-                <button onClick={() => setLumps((s) => [...s, { id: Date.now(), month: 1, amount: 10_000 }])} className="rounded-lg border px-3 py-1 hover:bg-gray-50">
+                <button
+                  onClick={() => setLumps((s) => [...s, { id: Date.now(), month: 1, amount: 10_000 }])}
+                  className="rounded-lg border px-3 py-1 hover:bg-gray-50"
+                >
                   +
                 </button>
-                <button onClick={() => setLumps((s) => (s.length ? s.slice(0, -1) : s))} className="rounded-lg border px-3 py-1 hover:bg-gray-50">
+                <button
+                  onClick={() => setLumps((s) => (s.length ? s.slice(0, -1) : s))}
+                  className="rounded-lg border px-3 py-1 hover:bg-gray-50"
+                >
                   –
                 </button>
               </div>
@@ -380,9 +449,7 @@ export default function App() {
                     <MoneyInput
                       value={l.amount}
                       onChange={(v) =>
-                        setLumps((s) =>
-                          s.map((x) => (x.id === l.id ? { ...x, amount: v } : x))
-                        )
+                        setLumps((s) => s.map((x) => (x.id === l.id ? { ...x, amount: v } : x)))
                       }
                     />
                   </div>
@@ -393,9 +460,7 @@ export default function App() {
                       min={1}
                       max={monthsToRetire}
                       onChange={(v) =>
-                        setLumps((s) =>
-                          s.map((x) => (x.id === l.id ? { ...x, month: v } : x))
-                        )
+                        setLumps((s) => s.map((x) => (x.id === l.id ? { ...x, month: v } : x)))
                       }
                     />
                     <div className="text-[11px] text-slate-500 mt-1">(1 = próximo mês … até {monthsToRetire})</div>
@@ -405,8 +470,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* SWR + Retornos */}
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* SWR + retornos */}
+          <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-xl border p-4 bg-white">
               <div className="text-sm font-medium text-slate-800">SWR — Taxa segura de retirada (% a.a.)</div>
               <input
@@ -417,12 +482,11 @@ export default function App() {
                 value={swrPct}
                 onChange={(e) => setSwrPct(parseFloat(e.target.value))}
                 className="w-full mt-2"
-                style={rangeBg(((swrPct - 2) / (6 - 2)) * 100)}
+                style={filledRangeStyle(((swrPct - 2) / (6 - 2)) * 100)}
               />
               <div className="text-xs text-slate-600 mt-2">
-                Atual: {formatNumber(swrPct, 1)}% • 3,5% é um nível histórico/realista; acima de 5% tende a ser mais agressivo.
+                Atual: {formatNumber(swrPct, 1)}% · 3,5% é um nível histórico/realista; acima de 5% tende a ser mais agressivo.
               </div>
-
               <div className="flex items-center gap-2 mt-3">
                 <input id="adv" type="checkbox" className="h-4 w-4" checked={showAdvanced} onChange={(e) => setShowAdvanced(e.target.checked)} />
                 <label htmlFor="adv" className="text-sm">Mostrar avançado</label>
@@ -445,30 +509,33 @@ export default function App() {
         {/* Cards à direita */}
         <div className="grid grid-cols-1 gap-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch auto-rows-[minmax(0,1fr)]">
-            {/* Patrimônio ao aposentar */}
-            <div className="rounded-xl border p-4 min-h-[180px] md:min-h-[200px] min-w-0 h-full flex flex-col overflow-hidden bg-white">
+            {/* Patrimônio */}
+            <div className="rounded-xl border p-3 min-h-[150px] md:min-h-[170px] min-w-0 h-full flex flex-col overflow-hidden bg-white">
               <div className="rounded-xl border px-4 py-3 bg-white/70">
                 <div className="text-slate-600 text-lg">Patrimônio ao aposentar</div>
-                <AutoFit max={42} min={22} className="font-extrabold tabular-nums tracking-tight">
+                <AutoFit max={34} min={20} className="font-extrabold tabular-nums tracking-tight">
                   {formatCurrency(wealthAtRetire)}
                 </AutoFit>
                 <div className="text-slate-700 mt-1">Horizonte: {retireAge - age} anos</div>
               </div>
             </div>
 
-            {/* Cobertura estimada */}
-            <div className="rounded-xl border p-4 min-h-[180px] md:min-h-[200px] min-w-0 h-full flex flex-col overflow-hidden bg-[var(--accent)] ring-1 ring-yellow-200" style={{ ["--accent" as any]: brand.accent }}>
+            {/* Cobertura */}
+            <div
+              className="rounded-xl border p-3 min-h-[150px] md:min-h-[170px] min-w-0 h-full flex flex-col overflow-hidden ring-1 ring-yellow-200"
+              style={{ background: brand.accent }}
+            >
               <div className="text-slate-700 text-lg">Cobertura estimada</div>
-              <div className="mt-1 inline-flex items-center rounded-full bg-white/70 border px-3 py-1 text-xs text-slate-700 w-max">
+              <div className="mt-1 inline-flex items-center rounded-full bg-white/70 border px-2 py-[2px] text-[11px] text-slate-700 w-max">
                 com gasto de {formatCurrency(monthlySpend)}/mês
               </div>
-              <div className="text-[clamp(1.4rem,3vw,2.2rem)] font-extrabold mt-2">
+              <div className="mt-2 font-extrabold" style={{ fontSize: "clamp(1.2rem,2.6vw,2.2rem)" }}>
                 {hasPerpetuity ? "Atingível" : `${formatNumber(runwayYears, 1)} anos`}
               </div>
               <div className="text-slate-700 text-sm mt-1">
                 {hasPerpetuity ? (
                   <>
-                    Com {formatNumber(retireRealReturn, 1)}% real a.a., <span className="whitespace-nowrap">gasto de {formatCurrency(monthlySpend)}/mês</span> é sustentável.
+                    Com {formatNumber(retireRealReturn, 1)}% real a.a., gasto de {formatCurrency(monthlySpend)}/mês é sustentável.
                   </>
                 ) : (
                   <>Até ~{formatNumber(endAge, 1)} anos de idade.</>
@@ -480,10 +547,10 @@ export default function App() {
             </div>
 
             {/* Plano de ação */}
-            <div className="rounded-xl border p-4 min-h-[180px] md:min-h-[200px] min-w-0 h-full flex flex-col overflow-hidden bg-white">
+            <div className="rounded-xl border p-3 min-h-[150px] md:min-h-[170px] min-w-0 h-full flex flex-col overflow-hidden bg-white">
               <div className="text-slate-700 text-lg">Plano de ação</div>
               <div className="text-slate-500 text-sm">Poupança extra necessária</div>
-              <AutoFit max={42} min={22} className="font-extrabold text-slate-900">
+              <AutoFit max={34} min={20} className="font-extrabold text-slate-900">
                 {formatCurrency(extraMonthlyToHitTarget)}/mês
               </AutoFit>
               <div className="text-slate-700 text-sm mt-2 leading-snug">
@@ -507,7 +574,7 @@ export default function App() {
                   <defs>
                     <linearGradient id="gradWealth" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor={brand.dark} stopOpacity={0.35} />
-                      <stop offset="95%" stopColor={brand.dark} stopOpacity={0.05} />
+                      <stop offset="95%" stopColor={brand.dark} stopOpacity={0.06} />
                     </linearGradient>
                     <linearGradient id="gradGoal" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#7dbb3a" stopOpacity={0.25} />
@@ -585,7 +652,7 @@ export default function App() {
               Adicione <strong>contribuições pontuais</strong> (vendas/bônus) com valor e mês.
             </li>
             <li>
-              Em <strong>Mostrar avançado</strong>, ajuste o <strong>retorno real na aposentadoria</strong> para ver por quantos anos o patrimônio cobre o gasto ou se é sustentável (perpetuidade).
+              Em <strong>Mostrar avançado</strong>, ajuste o <strong>retorno real na aposentadoria</strong> para ver por quantos anos o patrimônio cobre o gasto ou se é sustentável.
             </li>
             <li>
               Veja o <strong>número mágico</strong>, o <strong>patrimônio ao aposentar</strong>, a <strong>cobertura</strong> e, se faltar, a <strong>poupança extra necessária</strong> e o tempo estimado para atingir a meta.
@@ -595,73 +662,5 @@ export default function App() {
         </div>
       </div>
     </div>
-  );
-}
-
-/* ========= Inputs ========= */
-
-function SmallLabel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <label className={`text-sm font-medium text-slate-800 ${className}`}>{children}</label>;
-}
-
-function Field({ label, value, onChange }: { label: string; value: number; onChange: (n: number) => void }) {
-  return (
-    <div>
-      <SmallLabel>{label}</SmallLabel>
-      <NumberInput value={value} onChange={onChange} />
-    </div>
-  );
-}
-
-function MoneyField({ label, value, onChange }: { label: string; value: number; onChange: (n: number) => void }) {
-  return (
-    <div>
-      <SmallLabel>{label}</SmallLabel>
-      <MoneyInput value={value} onChange={onChange} />
-    </div>
-  );
-}
-
-function NumberInput({
-  value,
-  onChange,
-  min,
-  max,
-  step = 1,
-}: {
-  value: number;
-  onChange: (n: number) => void;
-  min?: number;
-  max?: number;
-  step?: number;
-}) {
-  return (
-    <input
-      type="number"
-      className="mt-1 w-full rounded-xl border px-3 py-2 bg-white"
-      value={value}
-      min={min}
-      max={max}
-      step={step}
-      onChange={(e) => onChange(parseFloat(e.target.value || "0"))}
-    />
-  );
-}
-
-function MoneyInput({ value, onChange }: { value: number; onChange: (n: number) => void }) {
-  const [txt, setTxt] = useState(formatCurrency(value));
-  useEffect(() => setTxt(formatCurrency(value)), [value]);
-  return (
-    <input
-      type="text"
-      className="mt-1 w-full rounded-xl border px-3 py-2 bg-white"
-      inputMode="numeric"
-      value={txt}
-      onChange={(e) => {
-        const raw = parseMoneyInput(e.target.value);
-        setTxt(formatCurrency(raw));
-        onChange(raw);
-      }}
-    />
   );
 }
