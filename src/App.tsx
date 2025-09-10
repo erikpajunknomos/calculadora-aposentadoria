@@ -473,6 +473,7 @@ export default function App() {
   const invalidRunway = !Number.isFinite(runwayY) || runwayY < 0;
   const runwayYearsLabel = invalidRunway ? "—" : formatNumber(runwayY, 1);
   const endAgeLabel = invalidRunway ? "—" : formatNumber(endAge, 1);
+  const nearPerpetuity = invalidRunway || (Number.isFinite(runwayY) && runwayY > 120);
   const endAgeSuffix = !invalidRunway && endAge > 120
     ? ` (parabéns para você, caso chegue a essa idade)`
     : "";
@@ -702,13 +703,13 @@ export default function App() {
                                     <div className="text-xs text-slate-600">{hasPerpetuity ? "Perpetuidade" : "Cobertura estimada"}</div>
 <div className="mt-1"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--brand-lime)]/10 text-[var(--brand-dark)] border border-[var(--brand-lime)]/40">com gasto de {formatCurrency(monthlySpend, "BRL")}/mês</span></div>
                   <div className="text-2xl font-semibold">
-                    {hasPerpetuity ? "Atingível" : `${runwayYearsLabel} anos`}
+                    {hasPerpetuity ? "Atingível" : (nearPerpetuity ? "Perpetuidade praticamente atingida" : `${runwayYearsLabel} anos`)}
                   </div>
                   <div className="text-xs text-slate-700">
                     {hasPerpetuity ? (
                       <>Com {formatNumber(retireRealReturn, 1)}% real a.a.</>
                     ) : (
-                      <>até ~{endAgeLabel} anos de idade{endAge > 120 ? " (parabéns para você, caso chegue a essa idade)" : ""}</>
+                      {nearPerpetuity ? null : <>até ~{endAgeLabel} anos de idade{Number.isFinite(endAge) && endAge > 123 ? " (você terá entrado para o guiness)" : (Number.isFinite(endAge) && endAge > 100 ? " (parabéns para você, caso chegue a essa idade)" : "")}</>}
                     )}
                   </div>
                 </div>
