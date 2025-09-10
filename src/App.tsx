@@ -297,8 +297,12 @@ function formatNumber(value: number, digits = 2) {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: digits }).format(value);
 }
 function monthlyRateFromRealAnnual(realAnnualPct: number) {
+
   return Math.pow(1 + realAnnualPct / 100, 1 / 12) - 1;
 }
+function isFiniteNumber(n: number) { return typeof n === "number" && Number.isFinite(n); }
+function safeNumber(n: number, fallback = 0) { return isFiniteNumber(n) ? n : fallback; }
+
 type Lump = { id: number; month: number; amount: number };
 
 /* projeção até a aposentadoria (só acumulação) */
@@ -513,11 +517,13 @@ export default function App() {
   /* dados do gráfico até 100 anos */
   const chartData = useMemo(
     () =>
-      fullProjection.map((row) => ({
-        Meses: row.m,
-        "Patrimônio projetado (real)": row.wealth,
-        "Meta de aposentadoria (SWR)": targetWealth,
-      })),
+      fullProjection
+        .map((row) => ({
+          Meses: row.m,
+          "Patrimônio projetado (real)": safeNumber(row.wealth),
+          "Meta de aposentadoria (SWR)": safeNumber(targetWealth),
+        }))
+        .filter((d) => isFiniteNumber(d.Meses) && isFiniteNumber(d["Patrimônio projetado (real)"]) && isFiniteNumber(d["Meta de aposentadoria (SWR)"])),
     [fullProjection, targetWealth]
   );
 
@@ -791,6 +797,9 @@ export default function App() {
                     <Area type="monotone" dataKey="Meta de aposentadoria (SWR)" stroke="var(--brand-lime)" fill="var(--brand-lime)" strokeWidth={2} fillOpacity={0.12} />
                   </AreaChart>
                 </ResponsiveContainer>
+        ) : (
+          <div className="text-sm text-slate-600">Dados insuficientes para exibir o gráfico.</div>
+        )}
               </div>
             </Section>
 
