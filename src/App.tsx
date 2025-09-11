@@ -832,13 +832,3 @@ function AppInner() {
     </div>
   );
 }
-
-
-/* ====== Debug wrapper ====== */
-export default function App() {
-  return (
-    <ErrorBoundary>
-      <AppInner />
-    </ErrorBoundary>
-  );
-}
