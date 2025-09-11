@@ -385,14 +385,21 @@ export default function App() {
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [age, setAge] = useState(24);
-  const [retireAge, setRetireAge] = useState(35);
+  const [retireAge, setRetireAge] = useState(34);
   const [currentWealth, setCurrentWealth] = useState(3_000_000);
-  const [monthlySaving, setMonthlySaving] = useState(0);
-  const [monthlySpend, setMonthlySpend] = useState(60_000);
+  const [monthlySaving, setMonthlySaving] = useState(120_000);
+  const [monthlySpend, setMonthlySpend] = useState(100_000);
   const [swrPct, setSwrPct] = useState(3.5);
   const [accumRealReturn, setAccumRealReturn] = useState(5);
   const [retireRealReturn, setRetireRealReturn] = useState(3.5);
-  const [lumpSums, setLumpSums] = useState<Lump[]>([]);
+  // Mantém SWR e Retorno na aposentadoria sincronizados quando o modo avançado está desligado
+  useEffect(() => {
+    if (!showAdvanced) {
+      setRetireRealReturn(swrPct);
+    }
+  }, [showAdvanced, swrPct]);
+
+  const [lumpSums, setLumpSums] = useState<Lump[]>([{ id: 1, month: 12, amount: 5_000_000 }]);
 
   const monthsToRetire = Math.max(0, (retireAge - age) * 12);
   const monthsTo100 = Math.max(0, (100 - age) * 12);
@@ -429,14 +436,13 @@ export default function App() {
     [age, currentWealth, monthsToRetire, monthlySaving, monthlyAccum, monthlyRetire, monthlySpend, lumpSums]
   );
 
-  const annualRetireSpend = monthlySpend * 12;
-  const targetWealth = (annualRetireSpend * 100) / swrPct;
+  const targetWealth = monthlySpend / Math.max(monthlyRetire, 1e-9);
   const gap = targetWealth - wealthAtRetire;
   const progressPct = Math.max(0, Math.min(100, (100 * wealthAtRetire) / Math.max(targetWealth, 1)));
   const diff = wealthAtRetire - targetWealth; // positivo = sobrou; negativo = falta
 
   /* sustentabilidade na aposentadoria */
-  const sustainableMonthlySWR = (wealthAtRetire * retireRealReturn) / 100 / 12;
+  const sustainableMonthlySWR = wealthAtRetire * monthlyRetire;
   const hasPerpetuity = sustainableMonthlySWR >= monthlySpend;
 
   /* extra por mês para chegar no número mágico no tempo definido */
@@ -462,7 +468,7 @@ export default function App() {
     if (ratio <= 0) return Infinity;
     return -Math.log(ratio) / Math.log(1 + r);
   }
-  const runwayY = yearsOfRunway({ startingWealth: wealthAtRetire, annualSpend: annualRetireSpend, realReturnAnnual: retireRealReturn });
+  const runwayY = yearsOfRunway({ startingWealth: wealthAtRetire, annualSpend: monthlySpend * 12, realReturnAnnual: retireRealReturn });
   const endAge = isFinite(runwayY) ? retireAge + runwayY : Infinity;
 
   const monthsToGoalAtCurrentPlan = useMemo(() => {
@@ -578,7 +584,7 @@ export default function App() {
                       <NumericInputBR value={ls.amount} onChange={(n) => updateLump(ls.id, "amount", n)} />
                     </div>
                     <div className="col-span-12 sm:col-span-4">
-                      <Label>Mês em que entra</Label>
+                      <Label><span className="whitespace-nowrap">Mês em que entra</span></Label>
                       <BaseInput type="number" min={1} max={monthsToRetire} value={ls.month} onChange={(e) => updateLump(ls.id, "month", Number(e.target.value) || 1)} />
                       <p className="text-xs text-slate-500 mt-1 sm:hidden">1 = próximo mês … até {monthsToRetire}</p>
                     </div>
@@ -597,7 +603,7 @@ export default function App() {
                 {/* SWR */}
                 <div>
                   <Label>SWR — Taxa segura de retirada (% a.a.)</Label>
-                  <SwrSlider value={swrPct} onChange={setSwrPct} min={2.5} max={8} step={0.1} />
+                  <SwrSlider value={swrPct} onChange={(v)=>{ setSwrPct(v); if(!showAdvanced) setRetireRealReturn(v); }} min={2.5} max={8} step={0.1} />
                 </div>
                 {/* Retorno na acumulação */}
                 <div>
@@ -685,7 +691,9 @@ export default function App() {
                     hasPerpetuity ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"
                   }`}
                 >
-                  <div className="text-xs text-slate-600">{hasPerpetuity ? "Perpetuidade" : "Cobertura estimada"}</div>
+                  
+                                    <div className="text-xs text-slate-600">{hasPerpetuity ? "Perpetuidade" : "Cobertura estimada"}</div>
+<div className="mt-1"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--brand-lime)]/10 text-[var(--brand-dark)] border border-[var(--brand-lime)]/40">com gasto de {formatCurrency(monthlySpend, "BRL")}/mês</span></div>
                   <div className="text-2xl font-semibold">
                     {hasPerpetuity ? "Atingível" : `${formatNumber(runwayY, 1)} anos`}
                   </div>
@@ -695,7 +703,6 @@ export default function App() {
                     ) : (
                       <>até ~{formatNumber(endAge, 1)} anos de idade</>
                     )}
-                    <div className="mt-2"><em>ou</em> gasto sustentável: <span className="font-medium text-[var(--brand-dark)]">{formatCurrency(sustainableMonthlySWR, "BRL")}/mês</span></div>
                   </div>
                 </div>
 
@@ -707,13 +714,14 @@ export default function App() {
                       <div className="text-sm text-slate-700">Poupança extra necessária</div>
                       <div className="text-2xl font-semibold">{formatCurrency(extraMonthlyNeeded, "BRL")}/mês</div>
                       {isFinite(monthsToGoalAtCurrentPlan) && monthsToGoalAtCurrentPlan !== 0 && (
-                        <div className="text-xs text-slate-600 mt-1">
-                          Mantendo a poupança atual{lumpSums.length ? " e os aportes" : ""}, meta em ~
-                          {monthsToGoalAtCurrentPlan > 24
-                            ? `${formatNumber(monthsToGoalAtCurrentPlan / 12, 1)} anos`
-                            : `${formatNumber(monthsToGoalAtCurrentPlan, 0)} meses`}
-                        </div>
-                      )}
+  <div className="text-xs text-slate-600 mt-1">
+    Mantendo a poupança atual{lumpSums.length ? " e os aportes" : ""}, meta em ~
+    {monthsToGoalAtCurrentPlan > 24
+      ? `${formatNumber(monthsToGoalAtCurrentPlan / 12, 1)} anos`
+      : `${formatNumber(monthsToGoalAtCurrentPlan, 0)} meses`}{" "}
+    (idade ~ {formatNumber(age + monthsToGoalAtCurrentPlan / 12, 1)} anos)
+  </div>
+)}
                     </>
                   ) : (
                     <div className="text-sm text-emerald-700">Meta atingida com as premissas atuais.</div>
