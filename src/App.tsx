@@ -297,8 +297,12 @@ function formatNumber(value: number, digits = 2) {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: digits }).format(value);
 }
 function monthlyRateFromRealAnnual(realAnnualPct: number) {
+
   return Math.pow(1 + realAnnualPct / 100, 1 / 12) - 1;
 }
+function isFiniteNumber(n: number) { return typeof n === "number" && Number.isFinite(n); }
+function safeNumber(n: number, fallback = 0) { return isFiniteNumber(n) ? n : fallback; }
+
 type Lump = { id: number; month: number; amount: number };
 
 /* projeção até a aposentadoria (só acumulação) */
@@ -375,7 +379,7 @@ function projectFullTo100({
 /* ===========================
    APP
 =========================== */
-export default function App() {
+function AppInner() {
   const themeVars = {
     ["--brand-dark" as any]: "#021e19",
     ["--brand-lime" as any]: "#c8e05b",
@@ -473,6 +477,20 @@ export default function App() {
   const invalidRunway = !Number.isFinite(runwayY) || runwayY < 0;
   const runwayYearsLabel = invalidRunway ? "—" : formatNumber(runwayY, 1);
   const endAgeLabel = invalidRunway ? "—" : formatNumber(endAge, 1);
+  const nearPerpetuity = invalidRunway || (Number.isFinite(runwayY) && runwayY > 120);
+  const endAgeMessage =
+    (Number.isFinite(endAge) && endAge > 123)
+      ? " (você terá entrado para o guiness)"
+      : ((Number.isFinite(endAge) && endAge > 100)
+          ? " (parabéns para você, caso chegue a essa idade)"
+          : "");
+
+  const endAgeLine = nearPerpetuity ? null : (
+    <>
+      até ~{endAgeLabel} anos de idade{endAgeMessage}
+    </>
+  );
+
   const endAgeSuffix = !invalidRunway && endAge > 120
     ? ` (parabéns para você, caso chegue a essa idade)`
     : "";
@@ -499,11 +517,13 @@ export default function App() {
   /* dados do gráfico até 100 anos */
   const chartData = useMemo(
     () =>
-      fullProjection.map((row) => ({
-        Meses: row.m,
-        "Patrimônio projetado (real)": row.wealth,
-        "Meta de aposentadoria (SWR)": targetWealth,
-      })),
+      fullProjection
+        .map((row) => ({
+          Meses: row.m,
+          "Patrimônio projetado (real)": safeNumber(row.wealth),
+          "Meta de aposentadoria (SWR)": safeNumber(targetWealth),
+        }))
+        .filter((d) => isFiniteNumber(d.Meses) && isFiniteNumber(d["Patrimônio projetado (real)"]) && isFiniteNumber(d["Meta de aposentadoria (SWR)"])),
     [fullProjection, targetWealth]
   );
 
@@ -702,13 +722,13 @@ export default function App() {
                                     <div className="text-xs text-slate-600">{hasPerpetuity ? "Perpetuidade" : "Cobertura estimada"}</div>
 <div className="mt-1"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--brand-lime)]/10 text-[var(--brand-dark)] border border-[var(--brand-lime)]/40">com gasto de {formatCurrency(monthlySpend, "BRL")}/mês</span></div>
                   <div className="text-2xl font-semibold">
-                    {hasPerpetuity ? "Atingível" : `${runwayYearsLabel} anos`}
+                    {hasPerpetuity ? "Atingível" : (nearPerpetuity ? "Perpetuidade praticamente atingida" : `${runwayYearsLabel} anos`)}
                   </div>
                   <div className="text-xs text-slate-700">
                     {hasPerpetuity ? (
                       <>Com {formatNumber(retireRealReturn, 1)}% real a.a.</>
                     ) : (
-                      <>até ~{endAgeLabel} anos de idade{endAge > 120 ? " (parabéns para você, caso chegue a essa idade)" : ""}</>
+                      {endAgeLine}
                     )}
                   </div>
                 </div>
@@ -741,7 +761,8 @@ export default function App() {
             <Section>
               <p className="font-semibold mb-2">Acumulação até a aposentadoria (valores reais, já ajustados à inflação)</p>
               <div className="h-[320px]">
-                <ResponsiveContainer width="100%" height={320}>
+                {chartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={320}>
                   <AreaChart data={chartData} margin={{ top: 44, right: 20, bottom: 0, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis
@@ -777,6 +798,9 @@ export default function App() {
                     <Area type="monotone" dataKey="Meta de aposentadoria (SWR)" stroke="var(--brand-lime)" fill="var(--brand-lime)" strokeWidth={2} fillOpacity={0.12} />
                   </AreaChart>
                 </ResponsiveContainer>
+        ) : (
+          <div className="text-sm text-slate-600">Dados insuficientes para exibir o gráfico.</div>
+        )}
               </div>
             </Section>
 
@@ -806,5 +830,15 @@ export default function App() {
         </div>
       </div>
     </div>
+  );
+}
+
+
+/* ====== Debug wrapper ====== */
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppInner />
+    </ErrorBoundary>
   );
 }
