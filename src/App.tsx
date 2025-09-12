@@ -620,13 +620,13 @@ export default function App() {
                 </div>
                 {/* Avançado: retorno na aposentadoria */}
                 {showAdvanced && (
-                  <>
+                  <div>
                     <div aria-hidden className="hidden sm:block" />
                     <div>
                       <Label>Retorno real na aposentadoria (% a.a.)</Label>
                       <BaseInput type="number" step={0.1} value={retireRealReturn} onChange={(e) => setRetireRealReturn(Number(e.target.value) || 0)} />
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
               {/* Aviso quando SWR ≠ retorno na aposentadoria */}
