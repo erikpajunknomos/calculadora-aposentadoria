@@ -605,7 +605,8 @@ export default function App() {
               </div>
             </div>
 
-{/* ===== SWR & Retornos ===== */}
+
+            {/* ===== SWR & Retornos ===== */}
             <div className="rounded-2xl border p-3 mt-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
                 {/* SWR */}
@@ -638,7 +639,8 @@ export default function App() {
             </div>
           </Section>
 
-{/* Outputs */}
+          {/* Outputs */}
+
           <div className="lg:col-span-2 space-y-6">
             {/* HERO: Número mágico + Progresso */}
             <Section className="order-1 lg:order-none">
