@@ -570,6 +570,7 @@ export default function App() {
               </div>
             </div>
 
+            {
             {/* Toggle avançado (mobile: mostra/oculta campos abaixo do gasto mensal) */}
             <div className="flex items-center gap-2 mt-4">
               <Switch checked={showAdvanced} onChange={setShowAdvanced} />
@@ -577,8 +578,8 @@ export default function App() {
             </div>
 
             {showAdvanced && (
-            <div>
-            {/* ===== Contribuições pontuais ===== */}
+              <div>
+{/* ===== Contribuições pontuais ===== */}
             <div className="rounded-2xl border p-3 mt-4 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <Label>Contribuições pontuais (valor e mês)</Label>
@@ -639,7 +640,9 @@ export default function App() {
             )}
           </Section>
 
-          {/* Outputs */}
+                        </div>
+            )}
+{/* Outputs */}
           <div className="lg:col-span-2 space-y-6">
             {/* HERO: Número mágico + Progresso */}
             <Section className="order-1 lg:order-none">
