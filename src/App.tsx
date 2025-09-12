@@ -399,7 +399,7 @@ export default function App() {
     }
   }, [showAdvanced, swrPct]);
 
-  const [lumpSums, setLumpSums] = useState<Lump[]>([{ id: 1, month: 12, amount: 5_000_000 }]);
+  const [lumpSums, setLumpSums] = useState<Lump[]>([]);
 
   const monthsToRetire = Math.max(0, (retireAge - age) * 12);
   const monthsTo100 = Math.max(0, (100 - age) * 12);
@@ -637,7 +637,6 @@ export default function App() {
               )}
             </>
             )}
-            </div>
           </Section>
 
           {/* Outputs */}
