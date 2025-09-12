@@ -570,7 +570,6 @@ export default function App() {
               </div>
             </div>
 
-            {
             {/* Toggle avançado (mobile: mostra/oculta campos abaixo do gasto mensal) */}
             <div className="flex items-center gap-2 mt-4">
               <Switch checked={showAdvanced} onChange={setShowAdvanced} />
