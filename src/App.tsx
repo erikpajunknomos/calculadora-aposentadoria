@@ -577,7 +577,7 @@ export default function App() {
             </div>
 
             {showAdvanced && (
-            <>
+            <div>
             {/* ===== Contribuições pontuais ===== */}
             <div className="rounded-2xl border p-3 mt-4 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -635,7 +635,7 @@ export default function App() {
                   <span className="font-semibold">Atenção:</span> o SWR informado ({formatNumber(swrPct,1)}%) é diferente do retorno real na aposentadoria ({formatNumber(retireRealReturn,1)}%). Atingir o número mágico não garante perpetuidade quando o retorno for menor que o SWR.
                 </div>
               )}
-            </>
+            </div>
             )}
           </Section>
 
