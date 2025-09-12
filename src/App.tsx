@@ -470,9 +470,6 @@ export default function App() {
   }
   const runwayY = yearsOfRunway({ startingWealth: wealthAtRetire, annualSpend: monthlySpend * 12, realReturnAnnual: retireRealReturn });
   const endAge = isFinite(runwayY) ? retireAge + runwayY : Infinity;
-  const runwayYSafe = Number.isFinite(runwayY) ? Math.max(0, runwayY) : Infinity;
-  const endAgeSafe = Number.isFinite(runwayYSafe) ? retireAge + runwayYSafe : Infinity;
-  const sustainableMonthly = wealthAtRetire * monthlyRetire;
 
   const monthsToGoalAtCurrentPlan = useMemo(() => {
     if (targetWealth <= 0) return 0;
@@ -559,11 +556,11 @@ export default function App() {
                 <Label>Idade de aposentadoria</Label>
                 <BaseInput type="number" value={retireAge} onChange={(e) => setRetireAge(Number(e.target.value) || 0)} />
               </div>
-              <div className="col-span-2">
+              <div className="col-span-1">
                 <Label>Patrimônio atual (BRL)</Label>
                 <NumericInputBR value={currentWealth} onChange={setCurrentWealth} placeholder="0" />
               </div>
-              <div className="col-span-2">
+              <div className="col-span-1">
                 <Label>Poupança mensal (BRL)</Label>
                 <NumericInputBRSigned value={monthlySaving} onChange={setMonthlySaving} placeholder="0" />
               </div>
@@ -573,6 +570,14 @@ export default function App() {
               </div>
             </div>
 
+            {/* Toggle avançado (mobile: mostra/oculta campos abaixo do gasto mensal) */}
+            <div className="flex items-center gap-2 mt-4">
+              <Switch checked={showAdvanced} onChange={setShowAdvanced} />
+              <span className="text-sm">Mostrar avançado</span>
+            </div>
+
+            {showAdvanced && (
+            <>
             {/* ===== Contribuições pontuais ===== */}
             <div className="rounded-2xl border p-3 mt-4 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -630,18 +635,15 @@ export default function App() {
                   <span className="font-semibold">Atenção:</span> o SWR informado ({formatNumber(swrPct,1)}%) é diferente do retorno real na aposentadoria ({formatNumber(retireRealReturn,1)}%). Atingir o número mágico não garante perpetuidade quando o retorno for menor que o SWR.
                 </div>
               )}
-              {/* Toggle avançado */}
-              <div className="flex items-center gap-2">
-                <Switch checked={showAdvanced} onChange={setShowAdvanced} />
-                <span className="text-sm">Mostrar avançado</span>
-              </div>
+            </>
+            )}
             </div>
           </Section>
 
           {/* Outputs */}
           <div className="lg:col-span-2 space-y-6">
             {/* HERO: Número mágico + Progresso */}
-            <Section>
+            <Section className="order-1 lg:order-none">
               <div className="grid md:grid-cols-5 gap-6 items-center">
                 {/* Número mágico super destacado */}
                 <div className="md:col-span-3">
@@ -679,14 +681,13 @@ export default function App() {
             </Section>
 
             {/* Cards secundários */}
-            <Section>
+            <Section className="order-3 lg:order-none">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Patrimônio ao aposentar */}
                 <div className="rounded-xl border p-4 min-h-[148px]">
                   <div className="text-xs text-slate-500">Patrimônio ao aposentar</div>
                   <div className="text-2xl font-semibold">{formatCurrency(wealthAtRetire, "BRL")}</div>
                   <div className="text-xs text-slate-600">Horizonte: {Math.round(monthsToRetire / 12)} anos</div>
-                  <div className="text-xs text-slate-700 mt-1">Pode gastar sem consumir o patrimônio: {formatCurrency(sustainableMonthly, "BRL")}/mês (com {formatNumber(retireRealReturn, 1)}% real a.a.)</div>
                 </div>
 
                 {/* Cobertura/Perpetuidade + Gasto sustentável */}
@@ -699,20 +700,13 @@ export default function App() {
                                     <div className="text-xs text-slate-600">{hasPerpetuity ? "Perpetuidade" : "Cobertura estimada"}</div>
 <div className="mt-1"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--brand-lime)]/10 text-[var(--brand-dark)] border border-[var(--brand-lime)]/40">com gasto de {formatCurrency(monthlySpend, "BRL")}/mês</span></div>
                   <div className="text-2xl font-semibold">
-                    {hasPerpetuity ? "Atingível" : `${formatNumber(runwayYSafe, 1)} anos`}
+                    {hasPerpetuity ? "Atingível" : `${formatNumber(runwayY, 1)} anos`}
                   </div>
                   <div className="text-xs text-slate-700">
                     {hasPerpetuity ? (
                       <>Com {formatNumber(retireRealReturn, 1)}% real a.a.</>
                     ) : (
-                      <>
-                        até ~{formatNumber(endAgeSafe, 1)} anos de idade
-                        {Number.isFinite(endAgeSafe) && endAgeSafe > 123 ? (
-                          <span className="ml-1">— você vai ter entrado pro Guiness!!!</span>
-                        ) : Number.isFinite(endAgeSafe) && endAgeSafe > 100 ? (
-                          <span className="ml-1">— parabéns para você, caso chegue a essa idade</span>
-                        ) : null}
-                      </>
+                      <>até ~{formatNumber(endAge, 1)} anos de idade</>
                     )}
                   </div>
                 </div>
@@ -742,7 +736,7 @@ export default function App() {
             </Section>
 
             {/* Gráfico */}
-            <Section>
+            <Section className="order-2 lg:order-none">
               <p className="font-semibold mb-2">Acumulação até a aposentadoria (valores reais, já ajustados à inflação)</p>
               <div className="h-[320px]">
                 <ResponsiveContainer width="100%" height={320}>
@@ -784,7 +778,19 @@ export default function App() {
               </div>
             </Section>
 
-            {/* Como usar */}
+            
+            {/* CTA WhatsApp (mobile) */}
+            <div className="lg:hidden">
+              <a
+                href="https://api.whatsapp.com/send?phone=5521986243722&text=Ol%C3%A1%21+Cheguei+pela+calculadora+de+aposentadoria+da+Nomos+Sports.+Podemos+bater+um+papo%3F"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden lg:inline-flex items-center gap-2 h-10 rounded-full px-4 text-sm font-medium bg-[#25D366] text-white hover:brightness-95"
+              >
+                Falar com um especialista no WhatsApp
+              </a>
+            </div>
+{/* Como usar */}
             <Section>
               <p className="font-semibold mb-2">Como usar (rápido)</p>
               <ol className="list-decimal pl-5 space-y-1 text-sm text-slate-700">
