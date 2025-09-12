@@ -616,7 +616,7 @@ export default function App() {
                 {/* Retorno na acumulação */}
                 <div>
                   <Label>Retorno real na acumulação (% a.a.)</Label>
-                  <BaseInput type="number" step={0.1} value={accumRealReturn} onChange={(e) => setAccumRealReturn(Number(e.target.value) || 0)} />
+                  <BaseInput type="number" step={0.1} value={retireRealReturn} onChange={(e) => setRetireRealReturn(Number(e.target.value) || 0)} />
                 </div>
                 {/* Avançado: retorno na aposentadoria */}
                 {showAdvanced && (
@@ -632,15 +632,12 @@ export default function App() {
               {/* Aviso quando SWR ≠ retorno na aposentadoria */}
               {showAdvanced && Math.abs(swrPct - retireRealReturn) > 0.01 && (
                 <div className="rounded-xl border border-amber-300 bg-amber-50 text-amber-900 px-3 py-2 text-xs">
-                  <span className="font-semibold">Atenção:</span> o SWR informado ({formatNumber(swrPct,1)}%) é diferente do retorno real na aposentadoria ({formatNumber(retireRealReturn,1)}%). Atingir o número mágico não garante perpetuidade quando o retorno for menor que o SWR.
+                  <span className="font-semibold">Atenção:</span> usar SWR diferente do retorno na aposentadoria não garante perpetuidade quando o retorno for menor que o SWR.
                 </div>
               )}
             </div>
-            )}
           </Section>
 
-                        </div>
-            )}
 {/* Outputs */}
           <div className="lg:col-span-2 space-y-6">
             {/* HERO: Número mágico + Progresso */}
