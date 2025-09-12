@@ -606,7 +606,7 @@ export default function App() {
             </div>
 
             {
-/* ===== SWR & Retornos ===== */
+{/* ===== SWR & Retornos ===== */}
             <div className="rounded-2xl border p-3 mt-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
                 {/* SWR */}
