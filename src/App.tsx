@@ -605,37 +605,37 @@ export default function App() {
               </div>
             </div>
 
-            {/* ===== SWR & Retornos ===== */}
+            {
+/* ===== SWR & Retornos ===== */
             <div className="rounded-2xl border p-3 mt-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
                 {/* SWR */}
                 <div>
                   <Label>SWR — Taxa segura de retirada (% a.a.)</Label>
-                  <SwrSlider value={swrPct} onChange={(v)=>{ setSwrPct(v); if(!showAdvanced) setRetireRealReturn(v); }} min={2.5} max={8} step={0.1} />
+                  <SwrSlider value={swrPct} onChange={(v)=>{ setSwrPct(v); if (!showAdvanced) setRetireRealReturn(v); }} min={2.5} max={8} step={0.1} />
                 </div>
                 {/* Retorno na acumulação */}
                 <div>
                   <Label>Retorno real na acumulação (% a.a.)</Label>
-                  <BaseInput type="number" step={0.1} value={retireRealReturn} onChange={(e) => setRetireRealReturn(Number(e.target.value) || 0)} />
+                  <BaseInput type="number" step={0.1} value={accumRealReturn} onChange={(e) => setAccumRealReturn(Number(e.target.value) || 0)} />
                 </div>
                 {/* Avançado: retorno na aposentadoria */}
                 {showAdvanced && (
-                  <div>
+                  <div className="sm:col-span-2">
                     <div aria-hidden className="hidden sm:block" />
                     <div>
                       <Label>Retorno real na aposentadoria (% a.a.)</Label>
                       <BaseInput type="number" step={0.1} value={retireRealReturn} onChange={(e) => setRetireRealReturn(Number(e.target.value) || 0)} />
                     </div>
                   </div>
-              </div>
                 )}
+              </div>
               {/* Aviso quando SWR ≠ retorno na aposentadoria */}
               {showAdvanced && Math.abs(swrPct - retireRealReturn) > 0.01 && (
                 <div className="rounded-xl border border-amber-300 bg-amber-50 text-amber-900 px-3 py-2 text-xs">
                   <span className="font-semibold">Atenção:</span> usar SWR diferente do retorno na aposentadoria não garante perpetuidade quando o retorno for menor que o SWR.
                 </div>
               )}
-
             </div>
           </Section>
 
