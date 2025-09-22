@@ -637,7 +637,7 @@ export default function App() {
                 </div>
               )}
             </div>
-          </Section>
+          
 
           {/* Outputs */}
 
@@ -678,7 +678,7 @@ export default function App() {
                   </div>
                 </div>
               </div>
-            </Section>
+            
 
             {/* Cards secundários */}
             <Section className="order-3 lg:order-none">
@@ -733,7 +733,7 @@ export default function App() {
                   )}
                 </div>
               </div>
-            </Section>
+            
 
             {/* Gráfico */}
             <Section className="order-2 lg:order-none">
@@ -776,7 +776,7 @@ export default function App() {
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-            </Section>
+            
 
             
             {/* CTA WhatsApp (mobile) */}
@@ -811,7 +811,7 @@ export default function App() {
                 </li>
               </ol>
               <p className="text-xs text-slate-500 mt-2">MVP educativo; não é aconselhamento financeiro.</p>
-            </Section>
+            
           </div>
         </div>
       </div>
