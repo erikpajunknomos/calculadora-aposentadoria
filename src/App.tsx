@@ -572,6 +572,9 @@ export default function App() {
                   <div className="text-xs text-slate-500">Patrimônio ao aposentar</div>
                   <div className="text-2xl font-semibold">{formatCurrency(wealthAtRetire, "BRL")}</div>
                   <div className="text-xs text-slate-600">Horizonte: {Math.round(monthsToRetire / 12)} anos</div>
+                  <div className="text-xs text-slate-600 mt-1">
+                    Pode gastar sem consumir o patrimônio: {formatCurrency(sustainableMonthlySWR, "BRL")}/mês (com {formatNumber(retireRealReturn, 1)}% real a.a.)
+                  </div>
                 </div>
 
                 {/* Cobertura / Perpetuidade */}
