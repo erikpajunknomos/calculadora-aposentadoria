@@ -720,7 +720,7 @@ export default function App() {
                       <div className="text-2xl font-semibold">{formatCurrency(extraMonthlyNeeded, "BRL")}/mês</div>
                       {isFinite(monthsToGoalAtCurrentPlan) && monthsToGoalAtCurrentPlan !== 0 && (
   <div className="text-xs text-slate-600 mt-1">
-    Mantendo a poupança atual{lumpSums.length ? " e os aportes" : ""}, meta em ~
+    Contudo, mantendo a poupança atual{lumpSums.length ? " e os aportes" : ""}, meta em ~
     {monthsToGoalAtCurrentPlan > 24
       ? `${formatNumber(monthsToGoalAtCurrentPlan / 12, 1)} anos`
       : `${formatNumber(monthsToGoalAtCurrentPlan, 0)} meses`}{" "}
