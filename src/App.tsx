@@ -543,7 +543,7 @@ export default function App() {
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Inputs */}
-          <Section>
+          <div>
             <p className="font-semibold mb-4 text-xl">Parâmetros</p>
 
             {/* Campos principais */}
@@ -637,13 +637,15 @@ export default function App() {
                 </div>
               )}
             </div>
-          
+          </div>
+            )}
+          </div>
 
           {/* Outputs */}
 
           <div className="lg:col-span-2 space-y-6">
             {/* HERO: Número mágico + Progresso */}
-            <Section className="order-1 lg:order-none">
+            <div className="order-1 lg:order-none rounded-2xl border border-[var(--brand-gray)] bg-white shadow-sm p-4 sm:p-5">
               <div className="grid md:grid-cols-5 gap-6 items-center">
                 {/* Número mágico super destacado */}
                 <div className="md:col-span-3">
@@ -678,10 +680,10 @@ export default function App() {
                   </div>
                 </div>
               </div>
-            
+            </div>
 
             {/* Cards secundários */}
-            <Section className="order-3 lg:order-none">
+            <div className="order-3 lg:order-none rounded-2xl border border-[var(--brand-gray)] bg-white shadow-sm p-4 sm:p-5">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Patrimônio ao aposentar */}
                 <div className="rounded-xl border p-4 min-h-[148px]">
@@ -733,10 +735,10 @@ export default function App() {
                   )}
                 </div>
               </div>
-            
+            </div>
 
             {/* Gráfico */}
-            <Section className="order-2 lg:order-none">
+            <div className="order-2 lg:order-none rounded-2xl border border-[var(--brand-gray)] bg-white shadow-sm p-4 sm:p-5">
               <p className="font-semibold mb-2">Acumulação até a aposentadoria (valores reais, já ajustados à inflação)</p>
               <div className="h-[320px]">
                 <ResponsiveContainer width="100%" height={320}>
@@ -776,7 +778,7 @@ export default function App() {
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-            
+            </div>
 
             
             {/* CTA WhatsApp (mobile) */}
@@ -791,7 +793,7 @@ export default function App() {
               </a>
             </div>
 {/* Como usar */}
-            <Section>
+            <div className="rounded-2xl border border-[var(--brand-gray)] bg-white shadow-sm p-4 sm:p-5">
               <p className="font-semibold mb-2">Como usar (rápido)</p>
               <ol className="list-decimal pl-5 space-y-1 text-sm text-slate-700">
                 <li>
@@ -811,7 +813,7 @@ export default function App() {
                 </li>
               </ol>
               <p className="text-xs text-slate-500 mt-2">MVP educativo; não é aconselhamento financeiro.</p>
-            
+            </div>
           </div>
         </div>
       </div>
