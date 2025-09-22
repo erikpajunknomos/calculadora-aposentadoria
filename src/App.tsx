@@ -303,7 +303,7 @@ export default function App() {
     ["--brand-gray" as any]: "#a6a797",
   };
 
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(() => (typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : false));
   const [age, setAge] = useState(24);
   const [retireAge, setRetireAge] = useState(34);
   const [currentWealth, setCurrentWealth] = useState(3_000_000);
