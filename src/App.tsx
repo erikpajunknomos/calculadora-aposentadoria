@@ -36,7 +36,7 @@ const BaseInput = React.forwardRef<
   <input
     ref={ref}
     {...props}
-    className={`mt-1 w-full rounded-xl border px-3 py-2 text-sm text-right tabular-nums tracking-tight outline-none focus:ring-2 focus:ring-[var(--brand-lime)] ${
+    className={`mt-1 w-full rounded-xl border bg-white px-3 py-2 text-sm text-right tabular-nums tracking-tight outline-none focus:ring-2 focus:ring-[var(--brand-lime)] ${
       props.className || ""
     }`}
   />
@@ -544,7 +544,8 @@ export default function App() {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Inputs */}
           <div>
-            <p className="font-semibold mb-4 text-xl">Parâmetros</p>
+            <p className="font-semibold mb-3 text-lg">Parâmetros</p>
+            <Section className="space-y-4">
 
             {/* Campos principais */}
             <div className="grid grid-cols-2 gap-3">
@@ -571,7 +572,7 @@ export default function App() {
             </div>
 
             {/* Toggle avançado (mobile: mostra/oculta campos abaixo do gasto mensal) */}
-            <div className="flex items-center gap-2 mt-4">
+            <div className="flex items-center gap-2 pt-2 border-t border-[var(--brand-gray)]/40">
               <Switch checked={showAdvanced} onChange={setShowAdvanced} />
               <span className="text-sm">Mostrar avançado</span>
             </div>
@@ -579,7 +580,7 @@ export default function App() {
             {showAdvanced && (
               <div>
 {/* ===== Contribuições pontuais ===== */}
-            <div className="rounded-2xl border p-3 mt-4 space-y-3">
+            <div className="pt-2 space-y-3 border-t border-[var(--brand-gray)]/40">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <Label>Contribuições pontuais (valor e mês)</Label>
                 <Button variant="outline" onClick={addLump}>＋</Button>
@@ -607,7 +608,7 @@ export default function App() {
 
 
             {/* ===== SWR & Retornos ===== */}
-            <div className="rounded-2xl border p-3 mt-4 space-y-4">
+            <div className="pt-3 space-y-4 border-t border-[var(--brand-gray)]/40">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
                 {/* SWR */}
                 <div>
@@ -639,7 +640,7 @@ export default function App() {
             </div>
           </div>
             )}
-          </div>
+          </Section>
 
           {/* Outputs */}
 
