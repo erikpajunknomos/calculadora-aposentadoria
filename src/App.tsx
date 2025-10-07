@@ -358,6 +358,9 @@ export default function App() {
   const diff = wealthAtRetire - targetWealth;
   const sustainableMonthlySWR = wealthAtRetire * monthlyRetire;
   const hasPerpetuity = sustainableMonthlySWR >= monthlySpend;
+  // SWR necessário (implied) dado o patrimônio projetado e gasto
+  const impliedSWRPct = wealthAtRetire > 0 ? (monthlySpend * 12 / wealthAtRetire) * 100 : null;
+
   // === Required annual accumulation return to reach targetWealth by retirement ===
   function wealthAtRetireWithMonthlyAccum(monthlyRate){
     const arr = projectToRetirement({
@@ -586,7 +589,14 @@ export default function App() {
                     {formatCurrency(targetWealth, "BRL")}
                   </div>
                   <div className="text-slate-600 text-sm">
-                    {formatNumber(swrPct, 1)}% a.a. com gasto de {formatCurrency(monthlySpend, "BRL")}/mês
+                    \1
+                  <div className="text-slate-500 text-xs mt-1">
+                    SWR necessário com seus inputs: {impliedSWRPct ? <strong>{formatNumber(impliedSWRPct, 2)}% a.a.</strong> : "—"}
+                    {impliedSWRPct && Math.abs(impliedSWRPct - swrPct) >= 0.05 && (
+                      <span className="ml-2 opacity-80">
+                        ({impliedSWRPct > swrPct ? "acima do que você setou" : "abaixo do que você setou"})
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="md:col-span-2">
@@ -600,7 +610,11 @@ export default function App() {
                     </div>
                   </div>
                   <div className={`mt-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs ${diff < 0 ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-emerald-50 border-emerald-200 text-emerald-800"}`}>
-                    {diff < 0 ? <>Faltam {formatCurrency(-diff, "BRL")} para o número mágico</> : <>Você superou a meta em {formatCurrency(diff, "BRL")}.</>}{gap > 0 && requiredAccumAnnualToHitTarget !== null && (
+                    \1{impliedSWRPct && gap > 0 && (
+                      <span className="ml-2 text-[11px] opacity-80">
+                        • SWR necessário hoje: {formatNumber(impliedSWRPct, 2)}% a.a.
+                      </span>
+                    )}{gap > 0 && requiredAccumAnnualToHitTarget !== null && (
                       <span className="ml-2 text-[11px] opacity-80">
                         • precisa render {formatNumber((requiredAccumAnnualToHitTarget||0)*100, 2)}% a.a. na acumulação
                       </span>
