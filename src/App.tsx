@@ -352,12 +352,54 @@ export default function App() {
     [age, currentWealth, monthsToRetire, monthlySaving, monthlyAccum, monthlyRetire, monthlySpend, lumpSums]
   );
 
-  const targetWealth = monthlySpend / Math.max(monthlyRetire, 1e-9);
+  const targetWealth = (monthlySpend * 12) / Math.max(swrPct / 100, 1e-9);
   const gap = targetWealth - wealthAtRetire;
   const progressPct = Math.max(0, Math.min(100, (100 * wealthAtRetire) / Math.max(targetWealth, 1)));
   const diff = wealthAtRetire - targetWealth;
   const sustainableMonthlySWR = wealthAtRetire * monthlyRetire;
   const hasPerpetuity = sustainableMonthlySWR >= monthlySpend;
+  // === Required annual accumulation return to reach targetWealth by retirement ===
+  function wealthAtRetireWithMonthlyAccum(monthlyRate){
+    const arr = projectToRetirement({
+      currentWealth,
+      monthlySaving,
+      months: monthsToRetire,
+      monthlyRealReturn: monthlyRate,
+      lumpSums,
+    });
+    return arr[arr.length - 1]?.wealth ?? currentWealth;
+  }
+  function solveRequiredMonthlyAccum(target){
+    if (monthsToRetire <= 0) return null;
+    const toMonthly = (annual)=> Math.pow(1 + annual, 1/12) - 1;
+    let loA = -0.5, hiA = 0.5;
+    let lo = toMonthly(loA), hi = toMonthly(hiA);
+    let fLo = wealthAtRetireWithMonthlyAccum(lo) - target;
+    let fHi = wealthAtRetireWithMonthlyAccum(hi) - target;
+    if (wealthAtRetire >= target) return 0;
+    for (let i=0;i<10 && fLo*fHi>0;i++){
+      loA -= 0.25; hiA += 0.25;
+      lo = toMonthly(loA); hi = toMonthly(hiA);
+      fLo = wealthAtRetireWithMonthlyAccum(lo) - target;
+      fHi = wealthAtRetireWithMonthlyAccum(hi) - target;
+      if (hiA > 3) break;
+    }
+    if (fLo*fHi>0) return null;
+    for (let it=0; it<40; it++){
+      const midA = (loA + hiA)/2;
+      const mid = toMonthly(midA);
+      const fMid = wealthAtRetireWithMonthlyAccum(mid) - target;
+      if (Math.abs(fMid) < 1) return midA;
+      if (fLo * fMid <= 0){
+        hiA = midA; fHi = fMid;
+      } else {
+        loA = midA; fLo = fMid;
+      }
+    }
+    return (loA + hiA)/2;
+  }
+  const requiredAccumAnnualToHitTarget = gap > 0 ? solveRequiredMonthlyAccum(targetWealth) : null;
+
 
   const extraMonthlyNeeded =
     gap > 0 && monthsToRetire > 0
@@ -509,7 +551,7 @@ export default function App() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
                       <div>
                         <Label>SWR — Taxa segura de retirada (% a.a.)</Label>
-                        <SwrSlider value={swrPct} onChange={(v)=>{ setSwrPct(v); if (!showAdvanced) setRetireRealReturn(v); }} min={2.5} max={8} step={0.1} />
+                        <SwrSlider value={swrPct} onChange={(v)=> setSwrPct(v)} min={2.5} max={8} step={0.1} />
                       </div>
                       <div>
                         <Label>Retorno real na acumulação (% a.a.)</Label>
@@ -558,7 +600,11 @@ export default function App() {
                     </div>
                   </div>
                   <div className={`mt-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs ${diff < 0 ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-emerald-50 border-emerald-200 text-emerald-800"}`}>
-                    {diff < 0 ? <>Faltam {formatCurrency(-diff, "BRL")} para o número mágico</> : <>Você superou a meta em {formatCurrency(diff, "BRL")}.</>}
+                    {diff < 0 ? <>Faltam {formatCurrency(-diff, "BRL")} para o número mágico</> : <>Você superou a meta em {formatCurrency(diff, "BRL")}.</>}{gap > 0 && requiredAccumAnnualToHitTarget !== null && (
+                      <span className="ml-2 text-[11px] opacity-80">
+                        • precisa render {formatNumber((requiredAccumAnnualToHitTarget||0)*100, 2)}% a.a. na acumulação
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
