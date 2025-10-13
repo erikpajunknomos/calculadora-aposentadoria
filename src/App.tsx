@@ -589,13 +589,15 @@ export default function App() {
                     {formatCurrency(targetWealth, "BRL")}
                   </div>
                   <div className="text-slate-600 text-sm">
+                    
                   <div className="text-slate-500 text-xs mt-1">
-                    SWR necessário com seus inputs: {impliedSWRPct != null ? <strong>{formatNumber(impliedSWRPct, 2)}% a.a.</strong> : "—"}
+                    SWR necessário com seus inputs: {impliedSWRPct ? <strong>{formatNumber(impliedSWRPct, 2)}% a.a.</strong> : "—"}
                     {impliedSWRPct && Math.abs(impliedSWRPct - swrPct) >= 0.05 && (
                       <span className="ml-2 opacity-80">
                         ({impliedSWRPct > swrPct ? "acima do que você setou" : "abaixo do que você setou"})
                       </span>
                     )}
+                  </div>
                   </div>
                 </div>
                 <div className="md:col-span-2">
@@ -619,8 +621,9 @@ export default function App() {
                       </span>
                     )}
                   </div>
-                </div>
-              </div>
+                  </div>
+                  </div>
+                  </div>
             </Section>
 
             {/* Cards secundários */}
