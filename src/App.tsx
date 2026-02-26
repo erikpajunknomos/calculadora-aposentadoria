@@ -80,6 +80,7 @@ const SwrSlider: React.FC<{ value: number; min: number; max: number; step: numbe
     };
   }, []);
   const t = Math.max(0, Math.min(1, (value - min) / (max - min)));
+  const mult = value > 0 ? 1200 / value : 0;
   const thumb = 20;
   const center = w ? thumb / 2 + (w - thumb) * t : 0;
   const fill = Math.max(thumb / 2, Math.min(center, w));
@@ -106,11 +107,8 @@ const SwrSlider: React.FC<{ value: number; min: number; max: number; step: numbe
           onChange={(e) => onChange(Number(e.target.value))}
         />
       </div>
-      <div className="mt-1 text-xs text-slate-500 leading-4">
-        <div>
-          Atual: {formatNumber(value, 1)}%
-          <span className="opacity-70"> • ≈ {formatBRInt(Math.round(spendMultipleFromSWR(value)))}x do gasto mensal</span>
-        </div>
+      <div className="mt-1 text-xs text-slate-500">
+        Atual: {formatNumber(value, 1)}% • ≈ {formatNumber(mult, 0)}x do gasto mensal
       </div>
     </div>
   );
@@ -220,12 +218,6 @@ function formatNumber(value: number, digits = 1) {
   if (!isFinite(value)) return "-";
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: digits }).format(value);
 }
-
-// Quantas vezes o patrimônio representa o gasto mensal (ex.: 4% -> 300x)
-function spendMultipleFromSWR(swrPct: number) {
-  if (!isFinite(swrPct) || swrPct <= 0) return Infinity;
-  return 1200 / swrPct;
-}
 function monthlyRateFromRealAnnual(realAnnualPct: number) {
   return Math.pow(1 + realAnnualPct / 100, 1 / 12) - 1;
 }
@@ -312,7 +304,7 @@ export default function App() {
     ["--brand-gray" as any]: "#a6a797",
   };
 
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [age, setAge] = useState(24);
   const [retireAge, setRetireAge] = useState(34);
   const [currentWealth, setCurrentWealth] = useState(3_000_000);
@@ -321,18 +313,33 @@ export default function App() {
   const [swrPct, setSwrPct] = useState(4);
   const [accumRealReturn, setAccumRealReturn] = useState(5);
   const [retireRealReturn, setRetireRealReturn] = useState(4);
+  const [useInflation, setUseInflation] = useState<boolean>(false);
+  const [inflationPct, setInflationPct] = useState(3.5);
 
   useEffect(() => {
-    // Fora do modo avançado, usamos a mesma expectativa de retorno (real) na acumulação e na aposentadoria.
-    if (!showAdvanced) setRetireRealReturn(accumRealReturn);
-  }, [showAdvanced, accumRealReturn]);
+    if (!showAdvanced) { setAccumRealReturn(swrPct); setRetireRealReturn(swrPct); setUseInflation(false); }
+  }, [showAdvanced, swrPct]);
 
-const [lumpSums, setLumpSums] = useState<Lump[]>([]);
+  const [lumpSums, setLumpSums] = useState<Lump[]>([]);
 
   const monthsToRetire = Math.max(0, (retireAge - age) * 12);
   const monthsTo100 = Math.max(0, (100 - age) * 12);
-  const monthlyAccum = monthlyRateFromRealAnnual(accumRealReturn);
-  const monthlyRetire = monthlyRateFromRealAnnual(retireRealReturn);
+  const toRealPct = (nominalPct: number, inflPct: number) => ((1 + nominalPct / 100) / (1 + inflPct / 100) - 1) * 100;
+
+  const effectiveAccumAnnualPct = useMemo(() => {
+    if (!showAdvanced) return swrPct;
+    if (useInflation) return toRealPct(accumRealReturn, inflationPct);
+    return accumRealReturn;
+  }, [showAdvanced, swrPct, useInflation, accumRealReturn, inflationPct]);
+
+  const effectiveRetireAnnualPct = useMemo(() => {
+    if (!showAdvanced) return swrPct;
+    if (useInflation) return toRealPct(retireRealReturn, inflationPct);
+    return retireRealReturn;
+  }, [showAdvanced, swrPct, useInflation, retireRealReturn, inflationPct]);
+
+  const monthlyAccum = monthlyRateFromRealAnnual(effectiveAccumAnnualPct);
+  const monthlyRetire = monthlyRateFromRealAnnual(effectiveRetireAnnualPct);
 
   const accumulation = useMemo(
     () =>
@@ -368,6 +375,7 @@ const [lumpSums, setLumpSums] = useState<Lump[]>([]);
   const diff = wealthAtRetire - targetWealth;
   const sustainableMonthlySWR = wealthAtRetire * monthlyRetire;
   const hasPerpetuity = sustainableMonthlySWR >= monthlySpend;
+
   // === Required annual accumulation return to reach targetWealth by retirement ===
   function wealthAtRetireWithMonthlyAccum(monthlyRate){
     const arr = projectToRetirement({
@@ -424,7 +432,7 @@ const [lumpSums, setLumpSums] = useState<Lump[]>([]);
     if (ratio <= 0) return Infinity;
     return -Math.log(ratio) / Math.log(1 + r);
   }
-  const runwayY = yearsOfRunway({ startingWealth: wealthAtRetire, annualSpend: monthlySpend * 12, realReturnAnnual: retireRealReturn });
+  const runwayY = yearsOfRunway({ startingWealth: wealthAtRetire, annualSpend: monthlySpend * 12, realReturnAnnual: effectiveRetireAnnualPct });
   const endAge = isFinite(runwayY) ? retireAge + runwayY : Infinity;
 
   const monthsToGoalAtCurrentPlan = useMemo(() => {
@@ -521,33 +529,13 @@ const [lumpSums, setLumpSums] = useState<Lump[]>([]);
                 </div>
               </div>
 
-              
-              {/* SWR e expectativa de retorno (sempre visíveis) */}
-              <div className="pt-3 space-y-4 border-t border-[var(--brand-gray)]/40">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
-                  <div>
-                    <Label>SWR — Taxa segura de retirada (% a.a.)</Label>
-                    <SwrSlider value={swrPct} onChange={(v)=> setSwrPct(v)} min={2.5} max={20} step={0.1} />
-                  </div>
 
-                  <div>
-                    <Label>Retorno real esperado (% a.a.)</Label>
-                    <BaseInput
-                      type="number"
-                      step={0.1}
-                      value={accumRealReturn}
-                      onChange={(e) => setAccumRealReturn(Number(e.target.value) || 0)}
-                    />
-                    {!showAdvanced && (
-                      <div className="mt-1 text-xs text-slate-500">
-                        Usado na acumulação e na aposentadoria.
-                      </div>
-                    )}
-                  </div>
-                </div>
+              {/* SWR (sempre visível) */}
+              <div className="pt-3 border-t border-[var(--brand-gray)]/40">
+                <Label>SWR — taxa segura de retirada (% a.a.)</Label>
+                <SwrSlider value={swrPct} onChange={(v) => setSwrPct(v)} min={2.5} max={20} step={0.1} />
               </div>
-
-{/* Toggle avançado */}
+              {/* Toggle avançado */}
               <div className="flex items-center gap-2 pt-2 border-t border-[var(--brand-gray)]/40">
                 <Switch checked={showAdvanced} onChange={setShowAdvanced} />
                 <span className="text-sm">Mostrar avançado</span>
@@ -582,23 +570,40 @@ const [lumpSums, setLumpSums] = useState<Lump[]>([]);
                     </div>
                   </div>
 
-                  {/* SWR & Retornos */}
-                  
-                  <div className="pt-3 space-y-3 border-t border-[var(--brand-gray)]/40">
-                    <Label>Retorno real na aposentadoria (% a.a.)</Label>
-                    <BaseInput
-                      type="number"
-                      step={0.1}
-                      value={retireRealReturn}
-                      onChange={(e) => setRetireRealReturn(Number(e.target.value) || 0)}
-                    />
-                    {Math.abs(swrPct - retireRealReturn) > 0.01 && (
+                  {/* Retornos (avançado) */}
+                  <div className="pt-3 space-y-4 border-t border-[var(--brand-gray)]/40">
+                    <div className="flex items-center gap-2">
+                      <Switch checked={useInflation} onChange={setUseInflation} />
+                      <span className="text-sm">Usar inflação (retornos nominais)</span>
+                    </div>
+
+                    {useInflation && (
+                      <div>
+                        <Label>Inflação esperada (% a.a.)</Label>
+                        <BaseInput type="number" step={0.1} value={inflationPct} onChange={(e) => setInflationPct(Number(e.target.value) || 0)} />
+                        <p className="text-xs text-slate-500 mt-1">A inflação que você viverá pode ser diferente do índice oficial.</p>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+                      <div>
+                        <Label>{useInflation ? "Retorno nominal na acumulação (% a.a.)" : "Retorno real na acumulação (% a.a.)"}</Label>
+                        <BaseInput type="number" step={0.1} value={accumRealReturn} onChange={(e) => setAccumRealReturn(Number(e.target.value) || 0)} />
+                        {useInflation && <p className="text-xs text-slate-500 mt-1">Real equivalente: <strong>{formatNumber(effectiveAccumAnnualPct, 2)}% a.a.</strong></p>}
+                      </div>
+                      <div>
+                        <Label>{useInflation ? "Retorno nominal na aposentadoria (% a.a.)" : "Retorno real na aposentadoria (% a.a.)"}</Label>
+                        <BaseInput type="number" step={0.1} value={retireRealReturn} onChange={(e) => setRetireRealReturn(Number(e.target.value) || 0)} />
+                        {useInflation && <p className="text-xs text-slate-500 mt-1">Real equivalente: <strong>{formatNumber(effectiveRetireAnnualPct, 2)}% a.a.</strong></p>}
+                      </div>
+                    </div>
+
+                    {effectiveRetireAnnualPct + 1e-9 < swrPct && (
                       <div className="rounded-xl border border-amber-300 bg-amber-50 text-amber-900 px-3 py-2 text-xs">
-                        <span className="font-semibold">Atenção:</span> se o retorno real na aposentadoria for menor que o SWR, a carteira tende a se esgotar ao longo do tempo.
+                        <span className="font-semibold">Atenção:</span> se o <strong>retorno real</strong> na aposentadoria ficar abaixo do SWR, o patrimônio tende a cair ao longo do tempo.
                       </div>
                     )}
                   </div>
-
                 </>
               )}
             </Section>
@@ -615,9 +620,6 @@ const [lumpSums, setLumpSums] = useState<Lump[]>([]);
         {formatCurrency(targetWealth, "BRL")}
       </div>
 
-      <div className="text-slate-500 text-xs mt-2">
-        ≈ {formatBRInt(Math.round(spendMultipleFromSWR(swrPct)))}x do gasto mensal (SWR {formatNumber(swrPct, 1)}% a.a.)
-      </div>
     </div>
 
     <div className="md:col-span-2">
@@ -641,11 +643,17 @@ const [lumpSums, setLumpSums] = useState<Lump[]>([]);
         </div>
       </div>
 
-      {gap > 0 && requiredAccumAnnualToHitTarget !== null && (
-        <div className="mt-2 inline-flex items-center rounded-lg border px-3 py-2 text-xs bg-amber-50 border-amber-200 text-amber-800">
-          precisa render {formatNumber((requiredAccumAnnualToHitTarget || 0) * 100, 2)}% a.a. na acumulação
-        </div>
-      )}
+      <div
+        className={`mt-2 inline-flex items-center rounded-lg border px-3 py-2 text-xs ${
+          gap > 0 ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-emerald-50 border-emerald-200 text-emerald-800"
+        }`}
+      >
+        {gap > 0 && requiredAccumAnnualToHitTarget !== null && (
+          <span className="ml-2 text-[11px] opacity-80">
+            • precisa render {formatNumber((requiredAccumAnnualToHitTarget || 0) * 100, 2)}% a.a. na acumulação
+          </span>
+        )}
+      </div>
     </div>
   </div>
 </Section>
@@ -659,7 +667,7 @@ const [lumpSums, setLumpSums] = useState<Lump[]>([]);
                   <div className="text-2xl font-semibold">{formatCurrency(wealthAtRetire, "BRL")}</div>
                   <div className="text-xs text-slate-600">Horizonte: {Math.round(monthsToRetire / 12)} anos</div>
                   <div className="text-xs text-slate-600 mt-1">
-                    Pode gastar sem consumir o patrimônio: {formatCurrency(sustainableMonthlySWR, "BRL")}/mês (com {formatNumber(retireRealReturn, 1)}% real a.a.)
+                    Pode gastar sem consumir o patrimônio: {formatCurrency(sustainableMonthlySWR, "BRL")}/mês (com {formatNumber(effectiveRetireAnnualPct, 1)}% real a.a.)
                   </div>
                 </div>
 
@@ -672,7 +680,7 @@ const [lumpSums, setLumpSums] = useState<Lump[]>([]);
                     </span>
                   </div>
                   <div className="text-2xl font-semibold">{hasPerpetuity ? "Atingível" : `${formatNumber(runwayY, 1)} anos`}</div>
-                  <div className="text-xs text-slate-700">{hasPerpetuity ? <>Com {formatNumber(retireRealReturn, 1)}% real a.a.</> : <>até ~{formatNumber(endAge, 1)} anos de idade</>}</div>
+                  <div className="text-xs text-slate-700">{hasPerpetuity ? <>Com {formatNumber(effectiveRetireAnnualPct, 1)}% real a.a.</> : <>até ~{formatNumber(endAge, 1)} anos de idade</>}</div>
                 </div>
 
                 {/* Plano de ação */}
@@ -735,11 +743,12 @@ const [lumpSums, setLumpSums] = useState<Lump[]>([]);
             <Section>
               <p className="font-semibold mb-2">Como usar (rápido)</p>
               <ol className="list-decimal pl-5 space-y-1 text-sm text-slate-700">
-                <li>Preencha idade atual, idade de aposentadoria, patrimônio, poupança mensal (aceita negativo) e gasto mensal — em valores reais.</li>
-                <li>Ajuste a <strong>SWR</strong> (3,5% é referência histórica; &gt; 5% é agressivo).</li>
-                <li>Adicione contribuições pontuais se houver (valor + mês).</li>
-                <li>Em <em>Mostrar avançado</em>, ajuste o retorno real na aposentadoria para ver cobertura e idade limite.</li>
-                <li>Veja o número mágico, patrimônio ao aposentar e, se faltar, a poupança extra e o tempo estimado para alcançar a meta.</li>
+                <li>Preencha idade atual, idade de aposentadoria, patrimônio, poupança mensal (aceita negativo) e gasto mensal — em valores de hoje (poder de compra).</li>
+                <li><strong>SWR</strong> é a <strong>taxa segura de retirada</strong>. Referência histórica: <strong>4%</strong> (≈ 300x o gasto mensal).</li>
+                <li>Fora do modo avançado, assumimos que <strong>retorno real = SWR</strong> (você vive do rendimento real e preserva o patrimônio).</li>
+                <li>Em <em>Mostrar avançado</em>, você pode separar retornos de <strong>acumulação</strong> e <strong>aposentadoria</strong>. Opcional: ligar “Usar inflação” para informar <strong>retornos nominais</strong> + inflação (o app converte para real).</li>
+                <li>Obs.: retorno <strong>real</strong> = retorno descontando inflação — e a sua inflação pode ser diferente do índice oficial do país.</li>
+                <li>O Warren Buffett teve ~<strong>20% a.a.</strong> de retorno histórico (sem descontar inflação e IR); por isso o máximo do slider vai até 20% (realismo 😉).</li>
               </ol>
               <p className="text-xs text-slate-500 mt-2">MVP educativo; não é aconselhamento financeiro.</p>
             </Section>
