@@ -125,7 +125,7 @@ const SwrSlider: React.FC<{
 
       {showFooter && (
         <div className="mt-1 text-xs text-slate-500">
-          Atual: {formatNumber(value, 1)}% • ≈ {formatNumber(mult, 0)}x do gasto mensal
+          Atual: {formatNumber(value, 1)}% • ≈ {formatNumber(mult, 0)}x o gasto mensal
         </div>
       )}
     </div>
@@ -578,25 +578,57 @@ const yearTicks = useMemo(() => {
                 <div className="flex items-end justify-between gap-3">
                   <div className="flex-1">
                     <Label>SWR — taxa segura de retirada (% a.a.)</Label>
-                    <BaseInput
-                      type="number"
-                      step={0.1}
-                      min={2.5}
-                      max={100}
-                      list="swr-sugestoes"
-                      value={swrPct}
-                      onChange={(e) => {
-                        const next = Number(e.target.value);
-                        if (Number.isFinite(next)) setSwrPct(Math.min(20, Math.max(2.5, next)));
-                      }}
-                    />
+
+<div className="mt-1 flex items-stretch gap-2">
+  <button
+    type="button"
+    aria-label="Diminuir SWR"
+    onClick={() =>
+      setSwrPct((prev) => {
+        const next = Math.round((prev - 0.25) * 100) / 100;
+        return Math.min(20, Math.max(2.5, next));
+      })
+    }
+    className="h-10 w-10 rounded-xl border border-[var(--brand-gray)] bg-white text-[var(--brand-dark)] hover:bg-[var(--brand-offwhite)] active:scale-[0.99]"
+  >
+    −
+  </button>
+
+  <BaseInput
+    className="flex-1 mt-0"
+    type="number"
+    step={0.25}
+    min={2.5}
+    max={100}
+    list="swr-sugestoes"
+    value={swrPct}
+    onChange={(e) => {
+      const next = Number(e.target.value);
+      if (Number.isFinite(next)) setSwrPct(Math.min(20, Math.max(2.5, next)));
+    }}
+  />
+
+  <button
+    type="button"
+    aria-label="Aumentar SWR"
+    onClick={() =>
+      setSwrPct((prev) => {
+        const next = Math.round((prev + 0.25) * 100) / 100;
+        return Math.min(20, Math.max(2.5, next));
+      })
+    }
+    className="h-10 w-10 rounded-xl border border-[var(--brand-gray)] bg-white text-[var(--brand-dark)] hover:bg-[var(--brand-offwhite)] active:scale-[0.99]"
+  >
+    +
+  </button>
+</div>
                     <datalist id="swr-sugestoes">
                       {[3, 3.5, 4, 5, 6, 8, 10, 12, 15, 20].map((v) => (
                         <option key={v} value={v} />
                       ))}
                     </datalist>
                     <div className="mt-1 text-xs text-slate-500 tabular-nums">
-                      ≈ {formatNumber(swrPct > 0 ? 1200 / swrPct : 0, 0)}x o gasto mensal
+                      ≈ {formatNumber(swrPct > 0 ? 1200 / swrPct : 0, 0)}x do gasto mensal
                     </div>
                   </div>
 
@@ -857,7 +889,7 @@ const yearTicks = useMemo(() => {
                 <li>Use <strong>Contribuições pontuais</strong> para simular luvas, bônus, venda de ativo etc. (valor + mês).</li>
                 <li>Olhe o <strong>Plano de ação</strong>: se faltar, ele sugere a <strong>poupança extra (em valores de hoje)</strong> para chegar no número mágico.</li>
                 <li>Obs.: retorno <strong>real</strong> = retorno descontando inflação — e a sua inflação pode ser diferente do índice oficial do país.</li>
-                <li>O Warren Buffett teve ~<strong>20% a.a.</strong> de retorno histórico (sem descontar inflação e IR).</li>
+                <li>O Warren Buffett teve ~<strong>20% a.a.</strong> de retorno histórico (sem descontar inflação e IR); só pra dar um parâmetro mesmo.</li>
               </ol>
               <p className="text-xs text-slate-500 mt-2">MVP educativo; não é aconselhamento financeiro.</p>
             </Section>
