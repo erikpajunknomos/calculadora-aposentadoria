@@ -65,7 +65,6 @@ const SwrSlider: React.FC<{ value: number; min: number; max: number; step: numbe
   step,
   onChange,
 }) => {
-  const HISTORICAL_SWR = 4; // referência histórica
   const wrapRef = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(0);
   useEffect(() => {
@@ -107,13 +106,14 @@ const SwrSlider: React.FC<{ value: number; min: number; max: number; step: numbe
           onChange={(e) => onChange(Number(e.target.value))}
         />
       </div>
-      <div className="mt-1 text-xs text-slate-500 leading-snug">
+      <div className="mt-1 text-xs text-slate-500 leading-4">
         <div>
-          Atual: {formatNumber(value, 1)}% • ≈ {formatBRInt(Math.round(spendMultipleFromSWR(value)))}x do gasto mensal
+          Atual: {formatNumber(value, 1)}%
+          <span className="opacity-70"> • ≈ {formatBRInt(Math.round(spendMultipleFromSWR(value)))}x do gasto mensal</span>
         </div>
         <div>
-          <span className="text-[var(--brand-dark)] font-medium">{formatNumber(HISTORICAL_SWR, 1)}% é referência histórica</span>{" "}
-          <span className="opacity-70">(≈ {formatBRInt(Math.round(spendMultipleFromSWR(HISTORICAL_SWR)))}x)</span>
+          <span className="text-[var(--brand-dark)] font-medium">4% é referência histórica</span>
+          <span className="opacity-70"> (≈ {formatBRInt(Math.round(spendMultipleFromSWR(4)))}x)</span>
         </div>
       </div>
     </div>
@@ -225,11 +225,10 @@ function formatNumber(value: number, digits = 1) {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: digits }).format(value);
 }
 
-// Quantas vezes o gasto mensal o "número mágico" representa para um SWR (% a.a.)
-// Ex.: 4% a.a. -> 300x (porque 1/0,04 = 25 anos; 25*12 = 300 meses)
+// Quantas vezes o patrimônio representa o gasto mensal (ex.: 4% -> 300x)
 function spendMultipleFromSWR(swrPct: number) {
-  const p = Math.max(1e-9, swrPct);
-  return 1200 / p;
+  if (!isFinite(swrPct) || swrPct <= 0) return Infinity;
+  return 1200 / swrPct;
 }
 function monthlyRateFromRealAnnual(realAnnualPct: number) {
   return Math.pow(1 + realAnnualPct / 100, 1 / 12) - 1;
@@ -372,9 +371,6 @@ export default function App() {
   const diff = wealthAtRetire - targetWealth;
   const sustainableMonthlySWR = wealthAtRetire * monthlyRetire;
   const hasPerpetuity = sustainableMonthlySWR >= monthlySpend;
-  // SWR necessário (implied) dado o patrimônio projetado e gasto
-  const impliedSWRPct = wealthAtRetire > 0 ? (monthlySpend * 12 / wealthAtRetire) * 100 : null;
-
   // === Required annual accumulation return to reach targetWealth by retirement ===
   function wealthAtRetireWithMonthlyAccum(monthlyRate){
     const arr = projectToRetirement({
@@ -603,20 +599,8 @@ export default function App() {
         {formatCurrency(targetWealth, "BRL")}
       </div>
 
-      <div className="mt-1 text-xs text-slate-500">
-        ≈ <span className="font-semibold text-slate-700">{formatBRInt(Math.round(spendMultipleFromSWR(swrPct)))}x</span> do gasto mensal (SWR{" "}
-        <span className="font-semibold text-slate-700">{formatNumber(swrPct, 1)}%</span> a.a.)
-      </div>
-
-      <div className="text-slate-600 text-sm">
-        <div className="text-slate-500 text-xs mt-1">
-          SWR necessário com seus inputs: {impliedSWRPct != null ? <strong>{formatNumber(impliedSWRPct, 2)}% a.a.</strong> : "—"}
-          {impliedSWRPct && Math.abs(impliedSWRPct - swrPct) >= 0.05 && (
-            <span className="ml-2 opacity-80">
-              ({impliedSWRPct > swrPct ? "acima do que você setou" : "abaixo do que você setou"})
-            </span>
-          )}
-        </div>
+      <div className="text-slate-500 text-xs mt-2">
+        ≈ {formatBRInt(Math.round(spendMultipleFromSWR(swrPct)))}x do gasto mensal (SWR {formatNumber(swrPct, 1)}% a.a.)
       </div>
     </div>
 
@@ -641,22 +625,11 @@ export default function App() {
         </div>
       </div>
 
-      <div
-        className={`mt-2 inline-flex items-center rounded-lg border px-3 py-2 text-xs ${
-          gap > 0 ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-emerald-50 border-emerald-200 text-emerald-800"
-        }`}
-      >
-        {impliedSWRPct && gap > 0 && (
-          <span className="ml-2 text-[11px] opacity-80">
-            • SWR necessário hoje: {formatNumber(impliedSWRPct, 2)}% a.a.
-          </span>
-        )}
-        {gap > 0 && requiredAccumAnnualToHitTarget !== null && (
-          <span className="ml-2 text-[11px] opacity-80">
-            • precisa render {formatNumber((requiredAccumAnnualToHitTarget || 0) * 100, 2)}% a.a. na acumulação
-          </span>
-        )}
-      </div>
+      {gap > 0 && requiredAccumAnnualToHitTarget !== null && (
+        <div className="mt-2 inline-flex items-center rounded-lg border px-3 py-2 text-xs bg-amber-50 border-amber-200 text-amber-800">
+          precisa render {formatNumber((requiredAccumAnnualToHitTarget || 0) * 100, 2)}% a.a. na acumulação
+        </div>
+      )}
     </div>
   </div>
 </Section>
