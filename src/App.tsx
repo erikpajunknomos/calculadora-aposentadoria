@@ -107,7 +107,9 @@ const SwrSlider: React.FC<{ value: number; min: number; max: number; step: numbe
         />
       </div>
       <div className="mt-1 text-xs text-slate-500">
-        Atual: {formatNumber(value, 1)}% · <span className="text-[var(--brand-dark)] font-medium">3,5% é referência histórica</span>
+        Atual: {formatNumber(value, 1)}% <span className="opacity-70">(≈ {formatBRInt(Math.round(spendMultipleFromSWR(value)))}x do gasto mensal)</span> ·{" "}
+        <span className="text-[var(--brand-dark)] font-medium">3,5% é referência histórica</span>{" "}
+        <span className="opacity-70">(≈ {formatBRInt(Math.round(spendMultipleFromSWR(3.5)))}x)</span>
       </div>
     </div>
   );
@@ -217,6 +219,13 @@ function formatNumber(value: number, digits = 1) {
   if (!isFinite(value)) return "-";
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: digits }).format(value);
 }
+
+// Quantas vezes o gasto mensal o "número mágico" representa para um SWR (% a.a.)
+// Ex.: 4% a.a. -> 300x (porque 1/0,04 = 25 anos; 25*12 = 300 meses)
+function spendMultipleFromSWR(swrPct: number) {
+  const p = Math.max(1e-9, swrPct);
+  return 1200 / p;
+}
 function monthlyRateFromRealAnnual(realAnnualPct: number) {
   return Math.pow(1 + realAnnualPct / 100, 1 / 12) - 1;
 }
@@ -309,7 +318,7 @@ export default function App() {
   const [currentWealth, setCurrentWealth] = useState(3_000_000);
   const [monthlySaving, setMonthlySaving] = useState(120_000);
   const [monthlySpend, setMonthlySpend] = useState(100_000);
-  const [swrPct, setSwrPct] = useState(3.5);
+  const [swrPct, setSwrPct] = useState(4);
   const [accumRealReturn, setAccumRealReturn] = useState(5);
   const [retireRealReturn, setRetireRealReturn] = useState(3.5);
 
@@ -554,7 +563,7 @@ export default function App() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
                       <div>
                         <Label>SWR — Taxa segura de retirada (% a.a.)</Label>
-                        <SwrSlider value={swrPct} onChange={(v)=> setSwrPct(v)} min={2.5} max={8} step={0.1} />
+                        <SwrSlider value={swrPct} onChange={(v)=> setSwrPct(v)} min={2.5} max={20} step={0.1} />
                       </div>
                       <div>
                         <Label>Retorno real na acumulação (% a.a.)</Label>
@@ -587,6 +596,11 @@ export default function App() {
       <div className="text-xs text-slate-500">Número mágico (SWR)</div>
       <div className="mt-1 text-4xl md:text-5xl font-extrabold tracking-tight text-[var(--brand-dark)]">
         {formatCurrency(targetWealth, "BRL")}
+      </div>
+
+      <div className="mt-1 text-xs text-slate-500">
+        Com SWR de <span className="font-semibold text-slate-700">{formatNumber(swrPct, 1)}% a.a.</span>, isso representa aproximadamente{" "}
+        <span className="font-semibold text-slate-700">{formatBRInt(Math.round(spendMultipleFromSWR(swrPct)))}x</span> o seu gasto mensal na aposentadoria.
       </div>
 
       <div className="text-slate-600 text-sm">
