@@ -729,9 +729,6 @@ const yearTicks = useMemo(() => {
           Equivalente nominal na aposentadoria: <strong>{formatCurrency(displayTargetWealthNomAtRetire, "BRL")}</strong> (inflação {formatNumber(inflationPct, 1)}% a.a.)
         </div>
       )}
-% a.a.).
-        </div>
-      )}
 
     </div>
 
