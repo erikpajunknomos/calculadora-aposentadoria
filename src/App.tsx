@@ -531,14 +531,14 @@ const yearTicks = useMemo(() => {
           <div className="flex items-center gap-4">
             <span className="px-3 py-1 rounded-md bg-[var(--brand-dark)] text-[var(--brand-lime)] font-semibold">Nomos Sports</span>
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight" style={{ color: "var(--brand-dark)" }}>
-              Calculadora de Aposentadoria para Atletas
+              Calculadora de Aposentadoria
             </h1>
           </div>
           <a
             href="https://api.whatsapp.com/send?phone=5521986243416&text=Ol%C3%A1%21+Estava+mexendo+na+calculadora+de+aposentadoria+da+Nomos+Sports.+Podemos+bater+um+papo%3F"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 h-10 rounded-xl px-4 text-sm font-medium bg-[#25D366] text-white hover:brightness-95"
+            className="hidden sm:inline-flex items-center gap-2 h-10 rounded-xl px-4 text-sm font-medium bg-[#25D366] text-white hover:brightness-95"
           >
             Falar com um especialista no WhatsApp
           </a>
@@ -574,71 +574,39 @@ const yearTicks = useMemo(() => {
 
 
               {/* SWR (sempre visível) */}
-<div className="pt-3 border-t border-[var(--brand-gray)]/40">
-  <Label>SWR — taxa segura de retirada (% a.a.)</Label>
+              <div className="pt-3 border-t border-[var(--brand-gray)]/40">
+                <div className="flex items-end justify-between gap-3">
+                  <div className="flex-1">
+                    <Label>SWR — taxa segura de retirada (% a.a.)</Label>
+                    <BaseInput
+                      type="number"
+                      step={0.1}
+                      min={2.5}
+                      max={20}
+                      list="swr-sugestoes"
+                      value={swrPct}
+                      onChange={(e) => {
+                        const next = Number(e.target.value);
+                        if (Number.isFinite(next)) setSwrPct(Math.min(20, Math.max(2.5, next)));
+                      }}
+                    />
+                    <datalist id="swr-sugestoes">
+                      {[3, 3.5, 4, 5, 6, 8, 10, 12, 15, 20].map((v) => (
+                        <option key={v} value={v} />
+                      ))}
+                    </datalist>
+                    <div className="mt-1 text-xs text-slate-500 tabular-nums">
+                      ≈ {formatNumber(swrPct > 0 ? 1200 / swrPct : 0, 0)}x do gasto mensal
+                    </div>
+                  </div>
 
-  <div className="mt-2 flex items-center justify-between gap-3">
-    <div className="flex items-center gap-2">
-      <button
-        type="button"
-        className="h-9 w-9 rounded-lg border border-[var(--brand-gray)]/60 bg-white text-[var(--brand-dark)] font-semibold"
-        onClick={() => setSwrPct((v) => Math.max(2.5, Math.round((v - 0.1) * 10) / 10))}
-        aria-label="Diminuir SWR"
-      >
-        −
-      </button>
-
-      <div className="min-w-[110px]">
-        <BaseInput
-          type="number"
-          step={0.1}
-          min={2.5}
-          max={20}
-          value={swrPct}
-          onChange={(e) => {
-            const next = Number(e.target.value);
-            if (Number.isFinite(next)) setSwrPct(Math.min(20, Math.max(2.5, next)));
-          }}
-        />
-      </div>
-
-      <button
-        type="button"
-        className="h-9 w-9 rounded-lg border border-[var(--brand-gray)]/60 bg-white text-[var(--brand-dark)] font-semibold"
-        onClick={() => setSwrPct((v) => Math.min(20, Math.round((v + 0.1) * 10) / 10))}
-        aria-label="Aumentar SWR"
-      >
-        +
-      </button>
-    </div>
-
-    <div className="text-right shrink-0">
-      <div className="text-2xl font-extrabold tabular-nums text-[var(--brand-dark)] leading-none">
-        {formatNumber(swrPct, 1)}%
-      </div>
-      <div className="mt-1 text-xs text-slate-500 tabular-nums">
-        ≈ {formatNumber(swrPct > 0 ? 1200 / swrPct : 0, 0)}x do gasto mensal
-      </div>
-    </div>
-  </div>
-
-  <div className="mt-2 flex flex-wrap gap-2">
-    {[3, 3.5, 4, 5, 6, 8, 10, 12, 15, 20].map((v) => (
-      <button
-        key={v}
-        type="button"
-        onClick={() => setSwrPct(v)}
-        className={`px-2.5 py-1 rounded-full text-xs border ${
-          Math.abs(swrPct - v) < 0.0001
-            ? "bg-[var(--brand-lime)]/20 border-[var(--brand-lime)]/60 text-[var(--brand-dark)]"
-            : "bg-white border-[var(--brand-gray)]/60 text-slate-700 hover:bg-slate-50"
-        }`}
-      >
-        {String(v).replace(".", ",")}%
-      </button>
-    ))}
-  </div>
-</div>
+                  <div className="text-right shrink-0">
+                    <div className="text-2xl font-extrabold tabular-nums text-[var(--brand-dark)] leading-none">
+                      {formatNumber(swrPct, 1)}%
+                    </div>
+                  </div>
+                </div>
+              </div>
 
 {/* Toggle avançado */}
               <div className="flex items-center gap-2 pt-2 border-t border-[var(--brand-gray)]/40">
@@ -715,9 +683,9 @@ const yearTicks = useMemo(() => {
           </div>
 
           {/* Outputs (coluna direita) */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 flex flex-col gap-6">
             {/* HERO */}
-<Section>
+<Section className="order-2 lg:order-1">
   <div className="grid md:grid-cols-5 gap-6 items-center">
     <div className="md:col-span-3">
       <div className="text-xs text-slate-500">Número mágico (SWR)</div>
@@ -769,7 +737,7 @@ const yearTicks = useMemo(() => {
 </Section>
 
             {/* Cards secundários */}
-            <Section>
+            <Section className="order-3 lg:order-2">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Patrimônio ao aposentar */}
                 <div className="rounded-xl border p-4 min-h-[148px]">
@@ -836,8 +804,7 @@ const yearTicks = useMemo(() => {
             </Section>
 
             {/* Gráfico */}
-            <Section>
-              <p className="font-semibold mb-2">"Acumulação até a aposentadoria (valores reais)"</p>
+            <Section className="order-1 lg:order-3">
               <div className="h-[320px]">
                 <ResponsiveContainer width="100%" height={320}>
                   <AreaChart data={chartData} margin={{ top: 52, right: 20, bottom: 0, left: 0 }}>
@@ -869,16 +836,28 @@ const yearTicks = useMemo(() => {
               </div>
             </Section>
 
+            {/* CTA (mobile) */}
+            <a
+              href="https://api.whatsapp.com/send?phone=5521986243416&text=Ol%C3%A1%21+Estava+mexendo+na+calculadora+de+aposentadoria+da+Nomos+Sports.+Podemos+bater+um+papo%3F"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="sm:hidden order-4 inline-flex items-center justify-center gap-2 h-10 rounded-xl px-4 text-sm font-medium bg-[#25D366] text-white hover:brightness-95"
+            >
+              Falar com um especialista no WhatsApp
+            </a>
+
             {/* Como usar */}
-            <Section>
+            <Section className="order-5 lg:order-4">
               <p className="font-semibold mb-2">Como usar (rápido)</p>
               <ol className="list-decimal pl-5 space-y-1 text-sm text-slate-700">
                 <li>Preencha idade atual, idade de aposentadoria, patrimônio, poupança mensal (aceita negativo) e gasto mensal — em valores de hoje (poder de compra).</li>
                 <li><strong>SWR</strong> é a <strong>taxa segura de retirada</strong>. Referência histórica: <strong>4%</strong> (≈ 300x o gasto mensal).</li>
                 <li>Fora do modo avançado, assumimos que <strong>retorno real = SWR</strong> (você vive do rendimento real e preserva o patrimônio).</li>
-                <li>Em <em>Mostrar avançado</em>, você pode separar retornos de <strong>acumulação</strong> e <strong>aposentadoria</strong>. Opcional: ligar “Usar inflação” para escolher uma inflação e ver <strong>equivalentes nominais</strong> (mantendo a conta em valores reais por baixo).</li>
+                <li>Em <em>Mostrar avançado</em>, você pode separar retornos de <strong>acumulação</strong> e <strong>aposentadoria</strong>. Opcional: ligar “Usar inflação” para ver <strong>equivalentes nominais</strong> na data da aposentadoria.</li>
+                <li>Use <strong>Contribuições pontuais</strong> para simular luvas, bônus, venda de ativo etc. (valor + mês).</li>
+                <li>Olhe o <strong>Plano de ação</strong>: se faltar, ele sugere a <strong>poupança extra (em valores de hoje)</strong> para chegar no número mágico.</li>
                 <li>Obs.: retorno <strong>real</strong> = retorno descontando inflação — e a sua inflação pode ser diferente do índice oficial do país.</li>
-                <li>O Warren Buffett teve ~<strong>20% a.a.</strong> de retorno histórico (sem descontar inflação e IR); por isso o máximo do slider vai até 20% (realismo 😉).</li>
+                <li>O Warren Buffett teve ~<strong>20% a.a.</strong> de retorno histórico (sem descontar inflação e IR); por isso o máximo da calculadora vai até 20% (realismo 😉).</li>
               </ol>
               <p className="text-xs text-slate-500 mt-2">MVP educativo; não é aconselhamento financeiro.</p>
             </Section>
