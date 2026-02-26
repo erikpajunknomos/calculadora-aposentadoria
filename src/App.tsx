@@ -594,7 +594,6 @@ const [lumpSums, setLumpSums] = useState<Lump[]>([]);
                     )}
                   </div>
 
-</div>
                 </>
               )}
             </Section>
