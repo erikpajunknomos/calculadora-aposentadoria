@@ -458,6 +458,8 @@ const displaySustainableMonthly = sustainableMonthlySWR * inflationFactorAtRetir
     gap > 0 && monthsToRetire > 0
       ? gap / Math.max(monthlyAccum > 0 ? (Math.pow(1 + monthlyAccum, monthsToRetire) - 1) / monthlyAccum : monthsToRetire, 1)
       : 0;
+  const displayExtraMonthlyNeeded = extraMonthlyNeeded * (showNominal ? inflationFactorAtRetire : 1);
+
 
   function yearsOfRunway({ startingWealth, annualSpend, realReturnAnnual }: { startingWealth: number; annualSpend: number; realReturnAnnual: number }) {
     const r = realReturnAnnual / 100;
@@ -488,17 +490,19 @@ const displaySustainableMonthly = sustainableMonthlySWR * inflationFactorAtRetir
     return Infinity;
   }, [targetWealth, currentWealth, monthlySaving, lumpSums, monthlyAccum]);
 
-  const chartData = useMemo(
+  const metaLine = useMemo(() => (showNominal ? displayTargetWealthAtRetire : targetWealth), [showNominal, displayTargetWealthAtRetire, targetWealth]);
+
+const chartData = useMemo(
   () =>
     fullProjection.map((row) => {
       const f = inflationFactorAtMonth(row.m);
       return {
         Meses: row.m,
         "Patrimônio projetado": row.wealth * f,
-        "Meta de aposentadoria (SWR)": targetWealth * f,
+        "Meta de aposentadoria (SWR)": metaLine,
       };
     }),
-  [fullProjection, targetWealth, inflationPct, showNominal]
+  [fullProjection, metaLine, showNominal, inflationPct]
 );
 
 const yearTicks = useMemo(() => {
@@ -571,17 +575,23 @@ const yearTicks = useMemo(() => {
 <div className="pt-3 border-t border-[var(--brand-gray)]/40">
   <Label>SWR — taxa segura de retirada (% a.a.)</Label>
 
-  <div className="mt-1 flex items-start justify-between gap-4">
-    <div className="w-full max-w-[260px]">
+  <div className="mt-2 flex items-center justify-between gap-4">
+    <div className="w-full max-w-[220px]">
       <SwrSlider value={swrPct} onChange={(v) => setSwrPct(v)} min={2.5} max={20} step={0.1} showFooter={false} />
-      <div className="mt-1 text-xs text-slate-500">
-        Atual: {formatNumber(swrPct, 1)}% • ≈ {formatNumber(swrPct > 0 ? 1200 / swrPct : 0, 0)}x do gasto mensal
+      <div className="mt-1 text-xs text-slate-500 tabular-nums">
+        ≈ {formatNumber(swrPct > 0 ? 1200 / swrPct : 0, 0)}x do gasto mensal
       </div>
     </div>
 
     <div className="text-right shrink-0">
-      <div className="text-2xl font-extrabold tabular-nums text-[var(--brand-dark)] leading-none">{formatNumber(swrPct, 1)}%</div>
-      <div className="mt-1 text-xs text-slate-500 tabular-nums">≈ {formatNumber(swrPct > 0 ? 1200 / swrPct : 0, 0)}x gasto mensal</div>
+      <div className="inline-flex items-baseline gap-2">
+        <div className="text-2xl font-extrabold tabular-nums text-[var(--brand-dark)] leading-none">
+          {formatNumber(swrPct, 1)}%
+        </div>
+      </div>
+      <div className="mt-1 text-xs text-slate-500 tabular-nums">
+        ≈ {formatNumber(swrPct > 0 ? 1200 / swrPct : 0, 0)}x gasto mensal
+      </div>
     </div>
   </div>
 </div>
@@ -637,14 +647,14 @@ const yearTicks = useMemo(() => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
                       <div>
-                        <Label>{useInflation ? "Retorno nominal na acumulação (% a.a.)" : "Retorno real na acumulação (% a.a.)"}</Label>
+                        <Label>Retorno real na acumulação (% a.a.)</Label>
                         <BaseInput type="number" step={0.1} value={accumRealReturn} onChange={(e) => setAccumRealReturn(Number(e.target.value) || 0)} />
-                        {useInflation && <p className="text-xs text-slate-500 mt-1">Real equivalente: <strong>{formatNumber(effectiveAccumAnnualPct, 2)}% a.a.</strong></p>}
+                        {useInflation && <p className="text-xs text-slate-500 mt-1">Nominal equivalente: <strong>{formatNumber(nominalAccumAnnualPct, 2)}% a.a.</strong></p>}
                       </div>
                       <div>
-                        <Label>{useInflation ? "Retorno nominal na aposentadoria (% a.a.)" : "Retorno real na aposentadoria (% a.a.)"}</Label>
+                        <Label>Retorno real na aposentadoria (% a.a.)</Label>
                         <BaseInput type="number" step={0.1} value={retireRealReturn} onChange={(e) => setRetireRealReturn(Number(e.target.value) || 0)} />
-                        {useInflation && <p className="text-xs text-slate-500 mt-1">Real equivalente: <strong>{formatNumber(effectiveRetireAnnualPct, 2)}% a.a.</strong></p>}
+                        {useInflation && <p className="text-xs text-slate-500 mt-1">Nominal equivalente: <strong>{formatNumber(nominalRetireAnnualPct, 2)}% a.a.</strong></p>}
                       </div>
                     </div>
 
@@ -744,7 +754,7 @@ const yearTicks = useMemo(() => {
                   {gap > 0 ? (
                     <>
                       <div className="text-sm text-slate-700">Poupança extra necessária</div>
-                      <div className="text-2xl font-semibold">{formatCurrency(extraMonthlyNeeded, "BRL")}/mês</div>
+                      <div className="text-2xl font-semibold">{formatCurrency(displayExtraMonthlyNeeded, "BRL")}/mês</div>
                       {isFinite(monthsToGoalAtCurrentPlan) && monthsToGoalAtCurrentPlan !== 0 && (
                         <div className="text-xs text-slate-600 mt-1">
                           Contudo, mantendo a poupança atual{lumpSums.length ? " e os aportes" : ""}, meta em ~
