@@ -58,15 +58,17 @@ const Button: React.FC<{ children: React.ReactNode; onClick?: () => void; varian
 );
 
 /* ========= Slider (SWR) ========= */
-const SwrSlider: React.FC<{ value: number; min: number; max: number; step: number; onChange: (n: number) => void }> = ({
-  value,
-  min,
-  max,
-  step,
-  onChange,
-}) => {
+const SwrSlider: React.FC<{
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (n: number) => void;
+  showFooter?: boolean;
+}> = ({ value, min, max, step, onChange, showFooter = true }) => {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(0);
+
   useEffect(() => {
     const el = wrapRef.current;
     const measure = () => setW(el?.offsetWidth ?? 0);
@@ -79,11 +81,16 @@ const SwrSlider: React.FC<{ value: number; min: number; max: number; step: numbe
       ro?.disconnect();
     };
   }, []);
+
   const t = Math.max(0, Math.min(1, (value - min) / (max - min)));
   const mult = value > 0 ? 1200 / value : 0;
   const thumb = 20;
   const center = w ? thumb / 2 + (w - thumb) * t : 0;
   const fill = Math.max(thumb / 2, Math.min(center, w));
+
+  // marcações principais para dar “escala” (4% é referência)
+  const ticks = [min, 4, 8, 12, 16, max].filter((x, i, a) => i === a.indexOf(x)).sort((a, b) => a - b);
+
   return (
     <div className="relative select-none pt-2">
       <div ref={wrapRef} className="relative h-8">
@@ -107,9 +114,20 @@ const SwrSlider: React.FC<{ value: number; min: number; max: number; step: numbe
           onChange={(e) => onChange(Number(e.target.value))}
         />
       </div>
-      <div className="mt-1 text-xs text-slate-500">
-        Atual: {formatNumber(value, 1)}% • ≈ {formatNumber(mult, 0)}x do gasto mensal
+
+      <div className="mt-1 flex justify-between text-[10px] text-slate-400 tabular-nums">
+        {ticks.map((x) => (
+          <span key={x} className={x === 4 ? "text-slate-600 font-semibold" : ""}>
+            {formatNumber(x, x === min ? 1 : 0)}%
+          </span>
+        ))}
       </div>
+
+      {showFooter && (
+        <div className="mt-1 text-xs text-slate-500">
+          Atual: {formatNumber(value, 1)}% • ≈ {formatNumber(mult, 0)}x do gasto mensal
+        </div>
+      )}
     </div>
   );
 };
@@ -323,22 +341,29 @@ export default function App() {
   const [lumpSums, setLumpSums] = useState<Lump[]>([]);
 
   const monthsToRetire = Math.max(0, (retireAge - age) * 12);
-  const monthsTo100 = Math.max(0, (100 - age) * 12);
-  const toRealPct = (nominalPct: number, inflPct: number) => ((1 + nominalPct / 100) / (1 + inflPct / 100) - 1) * 100;
+const monthsTo100 = Math.max(0, (100 - age) * 12);
 
-  const effectiveAccumAnnualPct = useMemo(() => {
-    if (!showAdvanced) return swrPct;
-    if (useInflation) return toRealPct(accumRealReturn, inflationPct);
-    return accumRealReturn;
-  }, [showAdvanced, swrPct, useInflation, accumRealReturn, inflationPct]);
+// Quando "usar inflação" estiver ligado, mostramos equivalentes nominais,
+// mas os cálculos-base continuam em valores reais (poder de compra).
+const showNominal = showAdvanced && useInflation;
+const toNominalPct = (realPct: number, inflPct: number) => ((1 + realPct / 100) * (1 + inflPct / 100) - 1) * 100;
 
-  const effectiveRetireAnnualPct = useMemo(() => {
-    if (!showAdvanced) return swrPct;
-    if (useInflation) return toRealPct(retireRealReturn, inflationPct);
-    return retireRealReturn;
-  }, [showAdvanced, swrPct, useInflation, retireRealReturn, inflationPct]);
+// Retornos efetivos (reais) usados na matemática
+const effectiveAccumAnnualPct = useMemo(() => {
+  if (!showAdvanced) return swrPct; // modo simples: retorno real = SWR
+  return accumRealReturn; // no avançado, o usuário informa retorno real (mesmo quando usamos inflação)
+}, [showAdvanced, swrPct, accumRealReturn]);
 
-  const monthlyAccum = monthlyRateFromRealAnnual(effectiveAccumAnnualPct);
+const effectiveRetireAnnualPct = useMemo(() => {
+  if (!showAdvanced) return swrPct; // modo simples: retorno real = SWR
+  return retireRealReturn;
+}, [showAdvanced, swrPct, retireRealReturn]);
+
+// Equivalentes nominais (apenas para exibição quando showNominal)
+const nominalAccumAnnualPct = useMemo(() => (showNominal ? toNominalPct(accumRealReturn, inflationPct) : accumRealReturn), [showNominal, accumRealReturn, inflationPct]);
+const nominalRetireAnnualPct = useMemo(() => (showNominal ? toNominalPct(retireRealReturn, inflationPct) : retireRealReturn), [showNominal, retireRealReturn, inflationPct]);
+
+const monthlyAccum = monthlyRateFromRealAnnual(effectiveAccumAnnualPct);
   const monthlyRetire = monthlyRateFromRealAnnual(effectiveRetireAnnualPct);
 
   const accumulation = useMemo(
@@ -374,6 +399,16 @@ export default function App() {
   const progressPct = Math.max(0, Math.min(100, (100 * wealthAtRetire) / Math.max(targetWealth, 1)));
   const diff = wealthAtRetire - targetWealth;
   const sustainableMonthlySWR = wealthAtRetire * monthlyRetire;
+const yearsToRetire = Math.max(0, retireAge - age);
+const infl = Math.max(0, inflationPct) / 100;
+const inflationFactorAtMonth = (m: number) => (showNominal ? Math.pow(1 + infl, m / 12) : 1);
+const inflationFactorAtRetire = inflationFactorAtMonth(monthsToRetire);
+
+// Valores exibidos (quando showNominal, são equivalentes nominais)
+const displayTargetWealthAtRetire = targetWealth * inflationFactorAtRetire;
+const displayWealthAtRetire = wealthAtRetire * inflationFactorAtRetire;
+const displayMonthlySpendAtRetire = monthlySpend * inflationFactorAtRetire;
+const displaySustainableMonthly = sustainableMonthlySWR * inflationFactorAtRetire;
   const hasPerpetuity = sustainableMonthlySWR >= monthlySpend;
 
   // === Required annual accumulation return to reach targetWealth by retirement ===
@@ -454,16 +489,19 @@ export default function App() {
   }, [targetWealth, currentWealth, monthlySaving, lumpSums, monthlyAccum]);
 
   const chartData = useMemo(
-    () =>
-      fullProjection.map((row) => ({
+  () =>
+    fullProjection.map((row) => {
+      const f = inflationFactorAtMonth(row.m);
+      return {
         Meses: row.m,
-        "Patrimônio projetado (real)": row.wealth,
-        "Meta de aposentadoria (SWR)": targetWealth,
-      })),
-    [fullProjection, targetWealth]
-  );
+        "Patrimônio projetado": row.wealth * f,
+        "Meta de aposentadoria (SWR)": targetWealth * f,
+      };
+    }),
+  [fullProjection, targetWealth, inflationPct, showNominal]
+);
 
-  const yearTicks = useMemo(() => {
+const yearTicks = useMemo(() => { = useMemo(() => {
     const yearsRange = 100 - age;
     let stepYears = Math.ceil(yearsRange / 8);
     if (stepYears >= 5) stepYears = Math.round(stepYears / 5) * 5;
@@ -503,7 +541,6 @@ export default function App() {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Inputs (coluna esquerda) */}
           <div>
-            <p className="font-semibold mb-3 text-lg">Parâmetros</p>
             <Section className="space-y-4">
               {/* Campos principais */}
               <div className="grid grid-cols-2 gap-3">
@@ -531,11 +568,24 @@ export default function App() {
 
 
               {/* SWR (sempre visível) */}
-              <div className="pt-3 border-t border-[var(--brand-gray)]/40">
-                <Label>SWR — taxa segura de retirada (% a.a.)</Label>
-                <SwrSlider value={swrPct} onChange={(v) => setSwrPct(v)} min={2.5} max={20} step={0.1} />
-              </div>
-              {/* Toggle avançado */}
+<div className="pt-3 border-t border-[var(--brand-gray)]/40">
+  <Label>SWR — taxa segura de retirada (% a.a.)</Label>
+
+  <div className="mt-1 flex items-start justify-between gap-4">
+    <div className="w-full max-w-[260px]">
+      <SwrSlider value={swrPct} onChange={(v) => setSwrPct(v)} min={2.5} max={20} step={0.1} showFooter={false} />
+      <div className="mt-1 text-xs text-slate-500">
+        Atual: {formatNumber(swrPct, 1)}% • ≈ {formatNumber(swrPct > 0 ? 1200 / swrPct : 0, 0)}x do gasto mensal
+      </div>
+    </div>
+
+    <div className="text-right shrink-0">
+      <div className="text-2xl font-extrabold tabular-nums text-[var(--brand-dark)] leading-none">{formatNumber(swrPct, 1)}%</div>
+      <div className="mt-1 text-xs text-slate-500 tabular-nums">≈ {formatNumber(swrPct > 0 ? 1200 / swrPct : 0, 0)}x gasto mensal</div>
+    </div>
+  </div>
+</div>
+{/* Toggle avançado */}
               <div className="flex items-center gap-2 pt-2 border-t border-[var(--brand-gray)]/40">
                 <Switch checked={showAdvanced} onChange={setShowAdvanced} />
                 <span className="text-sm">Mostrar avançado</span>
@@ -574,7 +624,7 @@ export default function App() {
                   <div className="pt-3 space-y-4 border-t border-[var(--brand-gray)]/40">
                     <div className="flex items-center gap-2">
                       <Switch checked={useInflation} onChange={setUseInflation} />
-                      <span className="text-sm">Usar inflação (retornos nominais)</span>
+                      <span className="text-sm">Usar inflação (mostrar equivalentes nominais)</span>
                     </div>
 
                     {useInflation && (
@@ -617,8 +667,13 @@ export default function App() {
     <div className="md:col-span-3">
       <div className="text-xs text-slate-500">Número mágico (SWR)</div>
       <div className="mt-1 text-4xl md:text-5xl font-extrabold tracking-tight text-[var(--brand-dark)]">
-        {formatCurrency(targetWealth, "BRL")}
+        {formatCurrency(displayTargetWealthAtRetire, "BRL")}
       </div>
+      {showNominal && (
+        <div className="mt-1 text-xs text-slate-500">
+          Em valores <strong>nominais</strong> na aposentadoria (inflação {formatNumber(inflationPct, 1)}% a.a.).
+        </div>
+      )}
 
     </div>
 
@@ -664,10 +719,10 @@ export default function App() {
                 {/* Patrimônio ao aposentar */}
                 <div className="rounded-xl border p-4 min-h-[148px]">
                   <div className="text-xs text-slate-500">Patrimônio ao aposentar</div>
-                  <div className="text-2xl font-semibold">{formatCurrency(wealthAtRetire, "BRL")}</div>
+                  <div className="text-2xl font-semibold">{formatCurrency(displayWealthAtRetire, "BRL")}</div>
                   <div className="text-xs text-slate-600">Horizonte: {Math.round(monthsToRetire / 12)} anos</div>
                   <div className="text-xs text-slate-600 mt-1">
-                    Pode gastar sem consumir o patrimônio: {formatCurrency(sustainableMonthlySWR, "BRL")}/mês (com {formatNumber(effectiveRetireAnnualPct, 1)}% real a.a.)
+                    Pode gastar sem consumir o patrimônio: {formatCurrency(displaySustainableMonthly, "BRL")}/mês (com {formatNumber(effectiveRetireAnnualPct, 1)}% real a.a.)
                   </div>
                 </div>
 
@@ -676,7 +731,7 @@ export default function App() {
                   <div className="text-xs text-slate-600">{hasPerpetuity ? "Perpetuidade" : "Cobertura estimada"}</div>
                   <div className="mt-1">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--brand-lime)]/10 text-[var(--brand-dark)] border border-[var(--brand-lime)]/40">
-                      com gasto de {formatCurrency(monthlySpend, "BRL")}/mês
+                      com gasto de {formatCurrency(displayMonthlySpendAtRetire, "BRL")}/mês
                     </span>
                   </div>
                   <div className="text-2xl font-semibold">{hasPerpetuity ? "Atingível" : `${formatNumber(runwayY, 1)} anos`}</div>
@@ -707,10 +762,10 @@ export default function App() {
 
             {/* Gráfico */}
             <Section>
-              <p className="font-semibold mb-2">Acumulação até a aposentadoria (valores reais)</p>
+              <p className="font-semibold mb-2">{showNominal ? "Acumulação até a aposentadoria (valores nominais)" : "Acumulação até a aposentadoria (valores reais)"}</p>
               <div className="h-[320px]">
                 <ResponsiveContainer width="100%" height={320}>
-                  <AreaChart data={chartData} margin={{ top: 44, right: 20, bottom: 0, left: 0 }}>
+                  <AreaChart data={chartData} margin={{ top: 52, right: 20, bottom: 0, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis
                       dataKey="Meses"
@@ -721,7 +776,7 @@ export default function App() {
                         return `${idade} anos`;
                       }}
                     />
-                    <YAxis tickFormatter={(v) => new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 }).format(v)} />
+                    <YAxis tickMargin={10} padding={{ top: 16 }} width={70} tickFormatter={(v) => new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 }).format(v)} />
                     {monthsToRetire > 0 && <ReferenceArea x1={monthsToRetire} x2={monthsTo100} fill="var(--brand-dark)" fillOpacity={0.05} />}
                     {monthsToRetire > 0 && (
                       <ReferenceLine
@@ -732,7 +787,7 @@ export default function App() {
                       />
                     )}
                     <Legend />
-                    <Area type="monotone" dataKey="Patrimônio projetado (real)" stroke="var(--brand-dark)" fill="var(--brand-dark)" strokeWidth={2} fillOpacity={0.15} />
+                    <Area type="monotone" dataKey="Patrimônio projetado" stroke="var(--brand-dark)" fill="var(--brand-dark)" strokeWidth={2} fillOpacity={0.15} />
                     <Area type="monotone" dataKey="Meta de aposentadoria (SWR)" stroke="var(--brand-lime)" fill="var(--brand-lime)" strokeWidth={2} fillOpacity={0.12} />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -746,7 +801,7 @@ export default function App() {
                 <li>Preencha idade atual, idade de aposentadoria, patrimônio, poupança mensal (aceita negativo) e gasto mensal — em valores de hoje (poder de compra).</li>
                 <li><strong>SWR</strong> é a <strong>taxa segura de retirada</strong>. Referência histórica: <strong>4%</strong> (≈ 300x o gasto mensal).</li>
                 <li>Fora do modo avançado, assumimos que <strong>retorno real = SWR</strong> (você vive do rendimento real e preserva o patrimônio).</li>
-                <li>Em <em>Mostrar avançado</em>, você pode separar retornos de <strong>acumulação</strong> e <strong>aposentadoria</strong>. Opcional: ligar “Usar inflação” para informar <strong>retornos nominais</strong> + inflação (o app converte para real).</li>
+                <li>Em <em>Mostrar avançado</em>, você pode separar retornos de <strong>acumulação</strong> e <strong>aposentadoria</strong>. Opcional: ligar “Usar inflação” para escolher uma inflação e ver <strong>equivalentes nominais</strong> (mantendo a conta em valores reais por baixo).</li>
                 <li>Obs.: retorno <strong>real</strong> = retorno descontando inflação — e a sua inflação pode ser diferente do índice oficial do país.</li>
                 <li>O Warren Buffett teve ~<strong>20% a.a.</strong> de retorno histórico (sem descontar inflação e IR); por isso o máximo do slider vai até 20% (realismo 😉).</li>
               </ol>
