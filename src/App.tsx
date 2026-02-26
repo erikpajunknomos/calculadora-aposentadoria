@@ -312,7 +312,7 @@ export default function App() {
     ["--brand-gray" as any]: "#a6a797",
   };
 
-  const [showAdvanced, setShowAdvanced] = useState<boolean>(() => (typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : false));
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [age, setAge] = useState(24);
   const [retireAge, setRetireAge] = useState(34);
   const [currentWealth, setCurrentWealth] = useState(3_000_000);
@@ -531,8 +531,13 @@ const [lumpSums, setLumpSums] = useState<Lump[]>([]);
                   </div>
 
                   <div>
-                    <Label>{showAdvanced ? "Retorno real na acumulação (% a.a.)" : "Retorno real esperado (% a.a.)"}</Label>
-                    <SwrSlider value={accumRealReturn} onChange={(v)=> setAccumRealReturn(v)} min={0} max={20} step={0.1} />
+                    <Label>Retorno real esperado (% a.a.)</Label>
+                    <BaseInput
+                      type="number"
+                      step={0.1}
+                      value={accumRealReturn}
+                      onChange={(e) => setAccumRealReturn(Number(e.target.value) || 0)}
+                    />
                     {!showAdvanced && (
                       <div className="mt-1 text-xs text-slate-500">
                         Usado na acumulação e na aposentadoria.
