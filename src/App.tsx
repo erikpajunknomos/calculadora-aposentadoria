@@ -582,7 +582,7 @@ const yearTicks = useMemo(() => {
                       type="number"
                       step={0.1}
                       min={2.5}
-                      max={20}
+                      max={100}
                       list="swr-sugestoes"
                       value={swrPct}
                       onChange={(e) => {
@@ -596,7 +596,7 @@ const yearTicks = useMemo(() => {
                       ))}
                     </datalist>
                     <div className="mt-1 text-xs text-slate-500 tabular-nums">
-                      ≈ {formatNumber(swrPct > 0 ? 1200 / swrPct : 0, 0)}x do gasto mensal
+                      ≈ {formatNumber(swrPct > 0 ? 1200 / swrPct : 0, 0)}x o gasto mensal
                     </div>
                   </div>
 
@@ -857,7 +857,7 @@ const yearTicks = useMemo(() => {
                 <li>Use <strong>Contribuições pontuais</strong> para simular luvas, bônus, venda de ativo etc. (valor + mês).</li>
                 <li>Olhe o <strong>Plano de ação</strong>: se faltar, ele sugere a <strong>poupança extra (em valores de hoje)</strong> para chegar no número mágico.</li>
                 <li>Obs.: retorno <strong>real</strong> = retorno descontando inflação — e a sua inflação pode ser diferente do índice oficial do país.</li>
-                <li>O Warren Buffett teve ~<strong>20% a.a.</strong> de retorno histórico (sem descontar inflação e IR); por isso o máximo da calculadora vai até 20% (realismo 😉).</li>
+                <li>O Warren Buffett teve ~<strong>20% a.a.</strong> de retorno histórico (sem descontar inflação e IR).</li>
               </ol>
               <p className="text-xs text-slate-500 mt-2">MVP educativo; não é aconselhamento financeiro.</p>
             </Section>
