@@ -65,6 +65,7 @@ const SwrSlider: React.FC<{ value: number; min: number; max: number; step: numbe
   step,
   onChange,
 }) => {
+  const HISTORICAL_SWR = 4; // referência histórica
   const wrapRef = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(0);
   useEffect(() => {
@@ -106,10 +107,14 @@ const SwrSlider: React.FC<{ value: number; min: number; max: number; step: numbe
           onChange={(e) => onChange(Number(e.target.value))}
         />
       </div>
-      <div className="mt-1 text-xs text-slate-500">
-        Atual: {formatNumber(value, 1)}% <span className="opacity-70">(≈ {formatBRInt(Math.round(spendMultipleFromSWR(value)))}x do gasto mensal)</span> ·{" "}
-        <span className="text-[var(--brand-dark)] font-medium">3,5% é referência histórica</span>{" "}
-        <span className="opacity-70">(≈ {formatBRInt(Math.round(spendMultipleFromSWR(3.5)))}x)</span>
+      <div className="mt-1 text-xs text-slate-500 leading-snug">
+        <div>
+          Atual: {formatNumber(value, 1)}% • ≈ {formatBRInt(Math.round(spendMultipleFromSWR(value)))}x do gasto mensal
+        </div>
+        <div>
+          <span className="text-[var(--brand-dark)] font-medium">{formatNumber(HISTORICAL_SWR, 1)}% é referência histórica</span>{" "}
+          <span className="opacity-70">(≈ {formatBRInt(Math.round(spendMultipleFromSWR(HISTORICAL_SWR)))}x)</span>
+        </div>
       </div>
     </div>
   );
@@ -320,7 +325,7 @@ export default function App() {
   const [monthlySpend, setMonthlySpend] = useState(100_000);
   const [swrPct, setSwrPct] = useState(4);
   const [accumRealReturn, setAccumRealReturn] = useState(5);
-  const [retireRealReturn, setRetireRealReturn] = useState(3.5);
+  const [retireRealReturn, setRetireRealReturn] = useState(4);
 
   useEffect(() => {
     if (!showAdvanced) setRetireRealReturn(swrPct);
@@ -599,8 +604,8 @@ export default function App() {
       </div>
 
       <div className="mt-1 text-xs text-slate-500">
-        Com SWR de <span className="font-semibold text-slate-700">{formatNumber(swrPct, 1)}% a.a.</span>, isso representa aproximadamente{" "}
-        <span className="font-semibold text-slate-700">{formatBRInt(Math.round(spendMultipleFromSWR(swrPct)))}x</span> o seu gasto mensal na aposentadoria.
+        ≈ <span className="font-semibold text-slate-700">{formatBRInt(Math.round(spendMultipleFromSWR(swrPct)))}x</span> do gasto mensal (SWR{" "}
+        <span className="font-semibold text-slate-700">{formatNumber(swrPct, 1)}%</span> a.a.)
       </div>
 
       <div className="text-slate-600 text-sm">
