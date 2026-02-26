@@ -323,10 +323,11 @@ export default function App() {
   const [retireRealReturn, setRetireRealReturn] = useState(4);
 
   useEffect(() => {
-    if (!showAdvanced) setRetireRealReturn(swrPct);
-  }, [showAdvanced, swrPct]);
+    // Fora do modo avançado, usamos a mesma expectativa de retorno (real) na acumulação e na aposentadoria.
+    if (!showAdvanced) setRetireRealReturn(accumRealReturn);
+  }, [showAdvanced, accumRealReturn]);
 
-  const [lumpSums, setLumpSums] = useState<Lump[]>([]);
+const [lumpSums, setLumpSums] = useState<Lump[]>([]);
 
   const monthsToRetire = Math.max(0, (retireAge - age) * 12);
   const monthsTo100 = Math.max(0, (100 - age) * 12);
@@ -520,7 +521,28 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Toggle avançado */}
+              
+              {/* SWR e expectativa de retorno (sempre visíveis) */}
+              <div className="pt-3 space-y-4 border-t border-[var(--brand-gray)]/40">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+                  <div>
+                    <Label>SWR — Taxa segura de retirada (% a.a.)</Label>
+                    <SwrSlider value={swrPct} onChange={(v)=> setSwrPct(v)} min={2.5} max={20} step={0.1} />
+                  </div>
+
+                  <div>
+                    <Label>{showAdvanced ? "Retorno real na acumulação (% a.a.)" : "Retorno real esperado (% a.a.)"}</Label>
+                    <SwrSlider value={accumRealReturn} onChange={(v)=> setAccumRealReturn(v)} min={0} max={20} step={0.1} />
+                    {!showAdvanced && (
+                      <div className="mt-1 text-xs text-slate-500">
+                        Usado na acumulação e na aposentadoria.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+{/* Toggle avançado */}
               <div className="flex items-center gap-2 pt-2 border-t border-[var(--brand-gray)]/40">
                 <Switch checked={showAdvanced} onChange={setShowAdvanced} />
                 <span className="text-sm">Mostrar avançado</span>
@@ -556,29 +578,23 @@ export default function App() {
                   </div>
 
                   {/* SWR & Retornos */}
-                  <div className="pt-3 space-y-4 border-t border-[var(--brand-gray)]/40">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
-                      <div>
-                        <Label>SWR — Taxa segura de retirada (% a.a.)</Label>
-                        <SwrSlider value={swrPct} onChange={(v)=> setSwrPct(v)} min={2.5} max={20} step={0.1} />
-                      </div>
-                      <div>
-                        <Label>Retorno real na acumulação (% a.a.)</Label>
-                        <BaseInput type="number" step={0.1} value={accumRealReturn} onChange={(e) => setAccumRealReturn(Number(e.target.value) || 0)} />
-                      </div>
-                      {showAdvanced && (
-                        <div className="sm:col-span-2">
-                          <Label>Retorno real na aposentadoria (% a.a.)</Label>
-                          <BaseInput type="number" step={0.1} value={retireRealReturn} onChange={(e) => setRetireRealReturn(Number(e.target.value) || 0)} />
-                        </div>
-                      )}
-                    </div>
-                    {showAdvanced && Math.abs(swrPct - retireRealReturn) > 0.01 && (
+                  
+                  <div className="pt-3 space-y-3 border-t border-[var(--brand-gray)]/40">
+                    <Label>Retorno real na aposentadoria (% a.a.)</Label>
+                    <BaseInput
+                      type="number"
+                      step={0.1}
+                      value={retireRealReturn}
+                      onChange={(e) => setRetireRealReturn(Number(e.target.value) || 0)}
+                    />
+                    {Math.abs(swrPct - retireRealReturn) > 0.01 && (
                       <div className="rounded-xl border border-amber-300 bg-amber-50 text-amber-900 px-3 py-2 text-xs">
-                        <span className="font-semibold">Atenção:</span> usar SWR diferente do retorno na aposentadoria não garante perpetuidade quando o retorno for menor que o SWR.
+                        <span className="font-semibold">Atenção:</span> se o retorno real na aposentadoria for menor que o SWR, a carteira tende a se esgotar ao longo do tempo.
                       </div>
                     )}
                   </div>
+
+</div>
                 </>
               )}
             </Section>
