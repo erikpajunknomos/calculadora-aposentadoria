@@ -628,7 +628,7 @@ const yearTicks = useMemo(() => {
                       ))}
                     </datalist>
                     <div className="mt-1 text-xs text-slate-500 tabular-nums">
-                      ≈ {formatNumber(swrPct > 0 ? 1200 / swrPct : 0, 0)}x do gasto mensal
+                      ≈ {formatNumber(swrPct > 0 ? 1200 / swrPct : 0, 0)}x o gasto mensal
                     </div>
                   </div>
 
