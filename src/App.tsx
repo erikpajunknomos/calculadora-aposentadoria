@@ -111,10 +111,6 @@ const SwrSlider: React.FC<{ value: number; min: number; max: number; step: numbe
           Atual: {formatNumber(value, 1)}%
           <span className="opacity-70"> • ≈ {formatBRInt(Math.round(spendMultipleFromSWR(value)))}x do gasto mensal</span>
         </div>
-        <div>
-          <span className="text-[var(--brand-dark)] font-medium">4% é referência histórica</span>
-          <span className="opacity-70"> (≈ {formatBRInt(Math.round(spendMultipleFromSWR(4)))}x)</span>
-        </div>
       </div>
     </div>
   );
