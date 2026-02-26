@@ -501,7 +501,7 @@ const displaySustainableMonthly = sustainableMonthlySWR * inflationFactorAtRetir
   [fullProjection, targetWealth, inflationPct, showNominal]
 );
 
-const yearTicks = useMemo(() => { = useMemo(() => {
+const yearTicks = useMemo(() => {
     const yearsRange = 100 - age;
     let stepYears = Math.ceil(yearsRange / 8);
     if (stepYears >= 5) stepYears = Math.round(stepYears / 5) * 5;
