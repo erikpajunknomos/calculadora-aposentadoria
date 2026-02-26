@@ -405,10 +405,14 @@ const inflationFactorAtMonth = (m: number) => (showNominal ? Math.pow(1 + infl, 
 const inflationFactorAtRetire = inflationFactorAtMonth(monthsToRetire);
 
 // Valores exibidos (quando showNominal, são equivalentes nominais)
-const displayTargetWealthAtRetire = targetWealth * inflationFactorAtRetire;
-const displayWealthAtRetire = wealthAtRetire * inflationFactorAtRetire;
-const displayMonthlySpendAtRetire = monthlySpend * inflationFactorAtRetire;
-const displaySustainableMonthly = sustainableMonthlySWR * inflationFactorAtRetire;
+const displayTargetWealthReal = targetWealth;
+const displayTargetWealthNomAtRetire = targetWealth * inflationFactorAtRetire;
+const displayWealthAtRetireReal = wealthAtRetire;
+const displayWealthAtRetireNomAtRetire = wealthAtRetire * inflationFactorAtRetire;
+const displayMonthlySpendReal = monthlySpend;
+const displayMonthlySpendNomAtRetire = monthlySpend * inflationFactorAtRetire;
+const displaySustainableMonthlyReal = sustainableMonthlySWR;
+const displaySustainableMonthlyNomAtRetire = sustainableMonthlySWR * inflationFactorAtRetire;
   const hasPerpetuity = sustainableMonthlySWR >= monthlySpend;
 
   // === Required annual accumulation return to reach targetWealth by retirement ===
@@ -458,7 +462,8 @@ const displaySustainableMonthly = sustainableMonthlySWR * inflationFactorAtRetir
     gap > 0 && monthsToRetire > 0
       ? gap / Math.max(monthlyAccum > 0 ? (Math.pow(1 + monthlyAccum, monthsToRetire) - 1) / monthlyAccum : monthsToRetire, 1)
       : 0;
-  const displayExtraMonthlyNeeded = extraMonthlyNeeded * (showNominal ? inflationFactorAtRetire : 1);
+  const displayExtraMonthlyNeededReal = extraMonthlyNeeded;
+  const displayExtraMonthlyNeededNomAtRetire = extraMonthlyNeeded * inflationFactorAtRetire;
 
 
   function yearsOfRunway({ startingWealth, annualSpend, realReturnAnnual }: { startingWealth: number; annualSpend: number; realReturnAnnual: number }) {
@@ -490,19 +495,16 @@ const displaySustainableMonthly = sustainableMonthlySWR * inflationFactorAtRetir
     return Infinity;
   }, [targetWealth, currentWealth, monthlySaving, lumpSums, monthlyAccum]);
 
-  const metaLine = useMemo(() => (showNominal ? displayTargetWealthAtRetire : targetWealth), [showNominal, displayTargetWealthAtRetire, targetWealth]);
+  const metaLine = useMemo(() => targetWealth, [targetWealth]);
 
 const chartData = useMemo(
   () =>
-    fullProjection.map((row) => {
-      const f = inflationFactorAtMonth(row.m);
-      return {
-        Meses: row.m,
-        "Patrimônio projetado": row.wealth * f,
-        "Meta de aposentadoria (SWR)": metaLine,
-      };
-    }),
-  [fullProjection, metaLine, showNominal, inflationPct]
+    fullProjection.map((row) => ({
+      Meses: row.m,
+      "Patrimônio projetado": row.wealth,
+      "Meta de aposentadoria (SWR)": metaLine,
+    })),
+  [fullProjection, metaLine]
 );
 
 const yearTicks = useMemo(() => {
@@ -575,26 +577,69 @@ const yearTicks = useMemo(() => {
 <div className="pt-3 border-t border-[var(--brand-gray)]/40">
   <Label>SWR — taxa segura de retirada (% a.a.)</Label>
 
-  <div className="mt-2 flex items-center justify-between gap-4">
-    <div className="w-full max-w-[220px]">
-      <SwrSlider value={swrPct} onChange={(v) => setSwrPct(v)} min={2.5} max={20} step={0.1} showFooter={false} />
+  <div className="mt-2 flex items-center justify-between gap-3">
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        className="h-9 w-9 rounded-lg border border-[var(--brand-gray)]/60 bg-white text-[var(--brand-dark)] font-semibold"
+        onClick={() => setSwrPct((v) => Math.max(2.5, Math.round((v - 0.1) * 10) / 10))}
+        aria-label="Diminuir SWR"
+      >
+        −
+      </button>
+
+      <div className="min-w-[110px]">
+        <BaseInput
+          type="number"
+          step={0.1}
+          min={2.5}
+          max={20}
+          value={swrPct}
+          onChange={(e) => {
+            const next = Number(e.target.value);
+            if (Number.isFinite(next)) setSwrPct(Math.min(20, Math.max(2.5, next)));
+          }}
+        />
+      </div>
+
+      <button
+        type="button"
+        className="h-9 w-9 rounded-lg border border-[var(--brand-gray)]/60 bg-white text-[var(--brand-dark)] font-semibold"
+        onClick={() => setSwrPct((v) => Math.min(20, Math.round((v + 0.1) * 10) / 10))}
+        aria-label="Aumentar SWR"
+      >
+        +
+      </button>
+    </div>
+
+    <div className="text-right shrink-0">
+      <div className="text-2xl font-extrabold tabular-nums text-[var(--brand-dark)] leading-none">
+        {formatNumber(swrPct, 1)}%
+      </div>
       <div className="mt-1 text-xs text-slate-500 tabular-nums">
         ≈ {formatNumber(swrPct > 0 ? 1200 / swrPct : 0, 0)}x do gasto mensal
       </div>
     </div>
+  </div>
 
-    <div className="text-right shrink-0">
-      <div className="inline-flex items-baseline gap-2">
-        <div className="text-2xl font-extrabold tabular-nums text-[var(--brand-dark)] leading-none">
-          {formatNumber(swrPct, 1)}%
-        </div>
-      </div>
-      <div className="mt-1 text-xs text-slate-500 tabular-nums">
-        ≈ {formatNumber(swrPct > 0 ? 1200 / swrPct : 0, 0)}x gasto mensal
-      </div>
-    </div>
+  <div className="mt-2 flex flex-wrap gap-2">
+    {[3, 3.5, 4, 5, 6, 8, 10, 12, 15, 20].map((v) => (
+      <button
+        key={v}
+        type="button"
+        onClick={() => setSwrPct(v)}
+        className={`px-2.5 py-1 rounded-full text-xs border ${
+          Math.abs(swrPct - v) < 0.0001
+            ? "bg-[var(--brand-lime)]/20 border-[var(--brand-lime)]/60 text-[var(--brand-dark)]"
+            : "bg-white border-[var(--brand-gray)]/60 text-slate-700 hover:bg-slate-50"
+        }`}
+      >
+        {String(v).replace(".", ",")}%
+      </button>
+    ))}
   </div>
 </div>
+
 {/* Toggle avançado */}
               <div className="flex items-center gap-2 pt-2 border-t border-[var(--brand-gray)]/40">
                 <Switch checked={showAdvanced} onChange={setShowAdvanced} />
@@ -677,11 +722,14 @@ const yearTicks = useMemo(() => {
     <div className="md:col-span-3">
       <div className="text-xs text-slate-500">Número mágico (SWR)</div>
       <div className="mt-1 text-4xl md:text-5xl font-extrabold tracking-tight text-[var(--brand-dark)]">
-        {formatCurrency(displayTargetWealthAtRetire, "BRL")}
+        {formatCurrency(displayTargetWealthReal, "BRL")}
       </div>
       {showNominal && (
         <div className="mt-1 text-xs text-slate-500">
-          Em valores <strong>nominais</strong> na aposentadoria (inflação {formatNumber(inflationPct, 1)}% a.a.).
+          Equivalente nominal na aposentadoria: <strong>{formatCurrency(displayTargetWealthNomAtRetire, "BRL")}</strong> (inflação {formatNumber(inflationPct, 1)}% a.a.)
+        </div>
+      )}
+% a.a.).
         </div>
       )}
 
@@ -729,11 +777,21 @@ const yearTicks = useMemo(() => {
                 {/* Patrimônio ao aposentar */}
                 <div className="rounded-xl border p-4 min-h-[148px]">
                   <div className="text-xs text-slate-500">Patrimônio ao aposentar</div>
-                  <div className="text-2xl font-semibold">{formatCurrency(displayWealthAtRetire, "BRL")}</div>
+                  <div className="text-2xl font-semibold">{formatCurrency(displayWealthAtRetireReal, "BRL")}</div>
+                  {showNominal && (
+                    <div className="text-xs text-slate-600 mt-1">
+                      Nominal na aposentadoria: <strong>{formatCurrency(displayWealthAtRetireNomAtRetire, "BRL")}</strong>
+                    </div>
+                  )}
                   <div className="text-xs text-slate-600">Horizonte: {Math.round(monthsToRetire / 12)} anos</div>
                   <div className="text-xs text-slate-600 mt-1">
-                    Pode gastar sem consumir o patrimônio: {formatCurrency(displaySustainableMonthly, "BRL")}/mês (com {formatNumber(effectiveRetireAnnualPct, 1)}% real a.a.)
+                    Pode gastar sem consumir o patrimônio: {formatCurrency(displaySustainableMonthlyReal, "BRL")}/mês (com {formatNumber(effectiveRetireAnnualPct, 1)}% real a.a.)
                   </div>
+                  {showNominal && (
+                    <div className="text-xs text-slate-600 mt-1">
+                      Equivalente nominal na aposentadoria: <strong>{formatCurrency(displaySustainableMonthlyNomAtRetire, "BRL")}</strong>/mês
+                    </div>
+                  )}
                 </div>
 
                 {/* Cobertura / Perpetuidade */}
@@ -741,9 +799,14 @@ const yearTicks = useMemo(() => {
                   <div className="text-xs text-slate-600">{hasPerpetuity ? "Perpetuidade" : "Cobertura estimada"}</div>
                   <div className="mt-1">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--brand-lime)]/10 text-[var(--brand-dark)] border border-[var(--brand-lime)]/40">
-                      com gasto de {formatCurrency(displayMonthlySpendAtRetire, "BRL")}/mês
+                      com gasto de {formatCurrency(displayMonthlySpendReal, "BRL")}/mês
                     </span>
                   </div>
+                  {showNominal && (
+                    <div className="mt-1 text-xs text-slate-600">
+                      Nominal na aposentadoria: <strong>{formatCurrency(displayMonthlySpendNomAtRetire, "BRL")}</strong>/mês
+                    </div>
+                  )}
                   <div className="text-2xl font-semibold">{hasPerpetuity ? "Atingível" : `${formatNumber(runwayY, 1)} anos`}</div>
                   <div className="text-xs text-slate-700">{hasPerpetuity ? <>Com {formatNumber(effectiveRetireAnnualPct, 1)}% real a.a.</> : <>até ~{formatNumber(endAge, 1)} anos de idade</>}</div>
                 </div>
@@ -754,7 +817,12 @@ const yearTicks = useMemo(() => {
                   {gap > 0 ? (
                     <>
                       <div className="text-sm text-slate-700">Poupança extra necessária</div>
-                      <div className="text-2xl font-semibold">{formatCurrency(displayExtraMonthlyNeeded, "BRL")}/mês</div>
+                      <div className="text-2xl font-semibold">{formatCurrency(displayExtraMonthlyNeededReal, "BRL")}/mês</div>
+                      {showNominal && (
+                        <div className="text-xs text-slate-600 mt-1">
+                          Equivalente nominal na aposentadoria: <strong>{formatCurrency(displayExtraMonthlyNeededNomAtRetire, "BRL")}</strong>/mês
+                        </div>
+                      )}
                       {isFinite(monthsToGoalAtCurrentPlan) && monthsToGoalAtCurrentPlan !== 0 && (
                         <div className="text-xs text-slate-600 mt-1">
                           Contudo, mantendo a poupança atual{lumpSums.length ? " e os aportes" : ""}, meta em ~
@@ -772,7 +840,7 @@ const yearTicks = useMemo(() => {
 
             {/* Gráfico */}
             <Section>
-              <p className="font-semibold mb-2">{showNominal ? "Acumulação até a aposentadoria (valores nominais)" : "Acumulação até a aposentadoria (valores reais)"}</p>
+              <p className="font-semibold mb-2">"Acumulação até a aposentadoria (valores reais)"</p>
               <div className="h-[320px]">
                 <ResponsiveContainer width="100%" height={320}>
                   <AreaChart data={chartData} margin={{ top: 52, right: 20, bottom: 0, left: 0 }}>
